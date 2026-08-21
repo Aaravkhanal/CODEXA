@@ -8,6 +8,8 @@ const MAX_MATCHES = 50;
 const MAX_OUTPUT = 20_000;
 const DEFAULT_TIMEOUT = 30_000;
 
+const IS_WINDOWS = process.platform === "win32";
+
 function resolveInsideCwd(path: string) {
   const cwd = process.cwd();
   const resolved = resolve(cwd, path);
@@ -24,6 +26,26 @@ function truncate(value: string, limit: number) {
   return value.length > limit
     ? `${value.slice(0, limit)}\n... (truncated, ${value.length} total chars)`
     : value;
+}
+
+/**
+ * Spawns a shell command in a cross-platform way.
+ * - Windows: uses `powershell.exe -NonInteractive -Command`
+ * - macOS / Linux: uses `bash -c`
+ */
+function spawnShell(command: string, cwd: string) {
+  if (IS_WINDOWS) {
+    return Bun.spawn(
+      ["powershell.exe", "-NonInteractive", "-NoProfile", "-Command", command],
+      { cwd, stdout: "pipe", stderr: "pipe", env: { ...process.env, TERM: "dumb" } },
+    );
+  }
+  return Bun.spawn(["bash", "-c", command], {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+    env: { ...process.env, TERM: "dumb" },
+  });
 }
 
 export async function executeLocalTool(
@@ -94,7 +116,8 @@ export async function executeLocalTool(
           truncated = true;
           break;
         }
-        files.push(relative(cwd, resolve(resolved, match)));
+        // Normalize path separators for cross-platform consistency
+        files.push(relative(cwd, resolve(resolved, match)).replaceAll("\\", "/"));
       }
 
       files.sort();
@@ -104,30 +127,57 @@ export async function executeLocalTool(
     case "grep": {
       const { pattern, path, include } = toolInputSchemas.grep.parse(input);
       const { cwd, resolved } = resolveInsideCwd(path);
-      const args = [
-        "-rn",
-        "--color=never",
-        "--exclude-dir=node_modules",
-        "--exclude-dir=.git",
-        "-E",
-      ];
-      if (include) args.push(`--include=${include}`);
-      args.push(pattern, resolved);
 
-      const proc = Bun.spawn(["grep", ...args], {
-        cwd,
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const [stdout, stderr] = await Promise.all([
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text(),
-      ]);
-      const exitCode = await proc.exited;
+      let stdout: string;
+      let stderr: string;
+      let exitCode: number;
 
-      if (exitCode !== 0 && exitCode !== 1) {
-        throw new Error(`grep failed: ${stderr.trim()}`);
+      if (IS_WINDOWS) {
+        // Use PowerShell Select-String as a portable grep substitute on Windows
+        const safeResolved = resolved.replaceAll("'", "''");
+        const safePattern = pattern.replaceAll("'", "''");
+        const includeClause = include ? `-Include '${include}'` : "";
+        const psCommand = [
+          `Get-ChildItem -Recurse -File -Path '${safeResolved}' ${includeClause}`,
+          `| Select-String -Pattern '${safePattern}' -CaseSensitive`,
+          `| ForEach-Object { "$($_.Path):$($_.LineNumber):$($_.Line)" }`,
+        ].join(" ");
+        const proc = Bun.spawn(
+          ["powershell.exe", "-NonInteractive", "-NoProfile", "-Command", psCommand],
+          { cwd, stdout: "pipe", stderr: "pipe" },
+        );
+        [stdout, stderr] = await Promise.all([
+          new Response(proc.stdout).text(),
+          new Response(proc.stderr).text(),
+        ]);
+        exitCode = await proc.exited;
+      } else {
+        const args = [
+          "-rn",
+          "--color=never",
+          "--exclude-dir=node_modules",
+          "--exclude-dir=.git",
+          "-E",
+        ];
+        if (include) args.push(`--include=${include}`);
+        args.push(pattern, resolved);
+
+        const proc = Bun.spawn(["grep", ...args], {
+          cwd,
+          stdout: "pipe",
+          stderr: "pipe",
+        });
+        [stdout, stderr] = await Promise.all([
+          new Response(proc.stdout).text(),
+          new Response(proc.stderr).text(),
+        ]);
+        exitCode = await proc.exited;
+
+        if (exitCode !== 0 && exitCode !== 1) {
+          throw new Error(`grep failed: ${stderr.trim()}`);
+        }
       }
+
       if (!stdout.trim()) {
         return { matches: [], message: "No matches found" };
       }
@@ -144,7 +194,8 @@ export async function executeLocalTool(
         const match = line.match(/^(.+?):(\d+):(.*)$/);
         if (match) {
           matches.push({
-            file: relative(cwd, match[1]!),
+            // Normalize Windows backslashes to forward slashes
+            file: relative(cwd, match[1]!).replaceAll("\\", "/"),
             line: Number(match[2]),
             content: match[3]!,
           });
@@ -166,7 +217,7 @@ export async function executeLocalTool(
       await writeFile(resolved, content, "utf-8");
       return {
         success: true as const,
-        path: relative(cwd, resolved),
+        path: relative(cwd, resolved).replaceAll("\\", "/"),
         bytesWritten: Buffer.byteLength(content, "utf-8"),
       };
     }
@@ -191,19 +242,14 @@ export async function executeLocalTool(
       );
       return {
         success: true as const,
-        path: relative(cwd, resolved),
+        path: relative(cwd, resolved).replaceAll("\\", "/"),
       };
     }
 
     case "bash": {
       const { command, timeout = DEFAULT_TIMEOUT } =
         toolInputSchemas.bash.parse(input);
-      const proc = Bun.spawn(["bash", "-c", command], {
-        cwd: resolveInsideCwd(".").resolved,
-        stdout: "pipe",
-        stderr: "pipe",
-        env: { ...process.env, TERM: "dumb" },
-      });
+      const proc = spawnShell(command, resolveInsideCwd(".").resolved);
       const timer = setTimeout(() => proc.kill(), timeout);
       const [stdout, stderr] = await Promise.all([
         new Response(proc.stdout).text(),

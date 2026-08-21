@@ -2,7 +2,10 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { z } from "zod";
 
+/** Primary MCP config location */
 export const MCP_CONFIG_RELATIVE_PATH = ".codexa/mcp.json";
+/** Legacy / alias MCP config location – checked as a fallback */
+export const MCP_CONFIG_LEGACY_RELATIVE_PATH = ".neocode/mcp.json";
 
 const toolAccessSchema = z.enum(["read", "write", "disabled"]);
 const environmentNameSchema = z.string().regex(
@@ -58,20 +61,38 @@ export type LoadedMcpConfig = {
 
 const emptyConfig: McpConfig = { version: 1, servers: {} };
 
+async function tryReadMcpFile(configPath: string): Promise<string | null> {
+  try {
+    return await readFile(configPath, "utf8");
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
 export async function loadMcpConfig(cwd: string): Promise<LoadedMcpConfig> {
-  const configPath = resolve(cwd, MCP_CONFIG_RELATIVE_PATH);
-  let raw: string;
+  // Try primary path first, then legacy alias path
+  const primaryPath = resolve(cwd, MCP_CONFIG_RELATIVE_PATH);
+  const legacyPath = resolve(cwd, MCP_CONFIG_LEGACY_RELATIVE_PATH);
+
+  let configPath = primaryPath;
+  let raw: string | null = null;
 
   try {
-    raw = await readFile(configPath, "utf8");
-  } catch (error) {
-    if (isNodeError(error) && error.code === "ENOENT") {
-      return { configPath, exists: false, config: emptyConfig };
+    raw = await tryReadMcpFile(primaryPath);
+    if (raw === null) {
+      // Fallback to legacy .neocode/mcp.json path
+      raw = await tryReadMcpFile(legacyPath);
+      if (raw !== null) configPath = legacyPath;
     }
-
+  } catch (error) {
     throw new McpConfigError(configPath, "Unable to read MCP configuration", {
       cause: error,
     });
+  }
+
+  if (raw === null) {
+    return { configPath: primaryPath, exists: false, config: emptyConfig };
   }
 
   let parsed: unknown;

@@ -1,9 +1,7 @@
-<p align="center">
-  <img src="./packages/web/public/og-image.png" alt="CODEXA - open-source terminal coding agent" width="100%" />
-</p>
+
 
 <p align="center">
-  <a href="https://github.com/codexa/codexa/releases">Releases</a>
+  <a href="https://github.com/Aaravkhanal/CODEXA/releases">Releases</a>
   ·
   <a href="./docs/RELEASING.md">Release Guide</a>
   ·
@@ -50,7 +48,7 @@ brew install codexa/tap/codexa
 ### macOS and Linux
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/codexa/codexa/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Aaravkhanal/CODEXA/main/install.sh | sh
 ```
 
 Alpine Linux users must install the C++ runtime libraries first:
@@ -62,11 +60,11 @@ apk add --no-cache libstdc++ libgcc
 ### Windows PowerShell
 
 ```powershell
-irm https://raw.githubusercontent.com/codexa/codexa/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/Aaravkhanal/CODEXA/main/install.ps1 | iex
 ```
 
 Standalone binaries are also available from
-[GitHub Releases](https://github.com/codexa/codexa/releases). They include
+[GitHub Releases](https://github.com/Aaravkhanal/CODEXA/releases). They include
 the Bun runtime, so users do not need to install Bun or Node.js to run CODEXA.
 
 Current binaries are unsigned. macOS may require manual approval in Privacy &
@@ -92,7 +90,7 @@ Rerun the installer to download the latest release and replace the existing
 binary:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/codexa/codexa/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/Aaravkhanal/CODEXA/main/install.sh | sh
 ```
 
 ### Windows PowerShell standalone installer
@@ -101,7 +99,7 @@ Rerun the installer, then restart the terminal so the updated executable is
 used:
 
 ```powershell
-irm https://raw.githubusercontent.com/codexa/codexa/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/Aaravkhanal/CODEXA/main/install.ps1 | iex
 ```
 
 Verify the installed version on any platform:
@@ -131,6 +129,7 @@ Common commands:
 | `/models` | Select the AI model |
 | `/sessions` | Browse previous sessions |
 | `/lens` | Explore the local codebase and inspect agent activity |
+| `/neolens` | Alias for `/lens` — explore code and replay activity |
 | `/mcp` | Inspect configured MCP servers and tool access |
 | `/theme` | Change the terminal theme |
 | `/login` | Sign in through the browser |
@@ -179,7 +178,7 @@ safely.
 
 ## MCP Integrations
 
-CODEXA discovers MCP servers from `.codexa/mcp.json` in the active project.
+CODEXA discovers MCP servers from `.codexa/mcp.json` (or `.neocode/mcp.json` as a fallback) in the active project.
 MCP is optional; without it, CODEXA's built-in local tools continue to work.
 
 Start from the included example:

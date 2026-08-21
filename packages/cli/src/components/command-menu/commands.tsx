@@ -72,6 +72,18 @@ export const COMMANDS: Command[] = [
     },
   },
   {
+    name: "neolens",
+    description: "Explore local code and replay agent activity",
+    value: "/neolens",
+    action: (ctx) => {
+      ctx.dialog.open({
+        title: "CodexaLens",
+        size: "fullscreen",
+        children: <CodexaLensDialogContent />,
+      });
+    },
+  },
+  {
     name: "mcp",
     description: "Inspect configured MCP servers and tools",
     value: "/mcp",
