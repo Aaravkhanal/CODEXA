@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 
-export const GITHUB_URL = "https://github.com/codexa/codexa";
+export const GITHUB_URL = "https://github.com/Aaravkhanal/CODEXA";
 
 export type IconName = "arrow" | "check" | "copy" | "menu" | "x";
 
@@ -34,7 +34,7 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
 export function BrandWordmark() {
   return (
     <span className="brand-wordmark" role="img" aria-label="CODEXA">
-      <span>NEO</span><strong>CODE</strong>
+      <span>CODE</span><strong>XA</strong>
     </span>
   );
 }

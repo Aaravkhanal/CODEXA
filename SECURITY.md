@@ -12,7 +12,7 @@ already have been fixed.
 
 ## Reporting a vulnerability
 
-Use [GitHub private vulnerability reporting](https://github.com/codexa/codexa/security/advisories/new).
+Use [GitHub private vulnerability reporting](https://github.com/Aaravkhanal/CODEXA/security/advisories/new).
 Do not open a public issue for an unpatched vulnerability.
 
 Include, when applicable:

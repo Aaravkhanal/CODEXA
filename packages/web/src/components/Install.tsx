@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Icon, writeClipboard, AnimatedSectionHeading } from "./Shared";
 
 const installOptions = [
-  { id: "brew", method: "Homebrew", os: "macOS + Linux", command: "brew install codexa/tap/codexa", step: "codexa" },
-  { id: "shell", method: "Curl / Shell", os: "macOS + Linux", command: "curl -fsSL https://raw.githubusercontent.com/codexa/codexa/main/install.sh | sh", step: "codexa" },
-  { id: "windows", method: "PowerShell", os: "Windows", command: "irm https://raw.githubusercontent.com/codexa/codexa/main/install.ps1 | iex", step: "codexa" },
+  { id: "brew", method: "Homebrew", os: "macOS + Linux", command: "brew install Aaravkhanal/tap/codexa", step: "codexa" },
+  { id: "shell", method: "Curl / Shell", os: "macOS + Linux", command: "curl -fsSL https://raw.githubusercontent.com/Aaravkhanal/CODEXA/main/install.sh | sh", step: "codexa" },
+  { id: "windows", method: "PowerShell", os: "Windows", command: "irm https://raw.githubusercontent.com/Aaravkhanal/CODEXA/main/install.ps1 | iex", step: "codexa" },
 ];
 
 function CopyButton({ text }: { text: string }) {

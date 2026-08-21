@@ -7,7 +7,7 @@ if (!version || !checksumsPath) {
   process.exit(1);
 }
 
-const repository = process.env.CODEXA_REPOSITORY ?? "codexa/codexa";
+const repository = process.env.CODEXA_REPOSITORY ?? "Aaravkhanal/CODEXA";
 const checksums = new Map(
   (await readFile(resolve(checksumsPath), "utf8"))
     .trim()
