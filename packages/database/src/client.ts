@@ -7,11 +7,7 @@ dotenv.config({
     path: path.resolve(import.meta.dirname, "../../../.env")
 });
 
-const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is not defined");
-}
+const databaseUrl = process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/codexa";
 
 const adapter = new PrismaPg({ connectionString: databaseUrl });
 
