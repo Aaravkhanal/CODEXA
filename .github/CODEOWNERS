@@ -1,0 +1,11 @@
+# Default maintainer review for every contribution.
+* @codexa
+
+# Security-sensitive and distribution paths.
+/.github/ @codexa
+/install.sh @codexa
+/install.ps1 @codexa
+/packages/server/src/middleware/ @codexa
+/packages/server/src/lib/auth.ts @codexa
+/packages/server/src/lib/polar.ts @codexa
+/scripts/ @codexa

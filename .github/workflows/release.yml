@@ -1,0 +1,230 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+env:
+  DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/codexa_ci
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - name: Require release tag to point to main history
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - run: bun install --frozen-lockfile
+      - name: Require tag to match CLI version
+        run: test "$GITHUB_REF_NAME" = "v$(bun -e 'console.log(require("./packages/cli/package.json").version)')"
+      - run: bun run --cwd packages/database db:generate
+      - run: bun test
+      - run: bun packages/cli/node_modules/typescript/bin/tsc --noEmit -p packages/shared/tsconfig.json
+      - run: bun packages/cli/node_modules/typescript/bin/tsc --noEmit -p packages/database/tsconfig.json
+      - run: bun packages/cli/node_modules/typescript/bin/tsc --noEmit -p packages/server/tsconfig.json
+      - run: bun packages/cli/node_modules/typescript/bin/tsc --noEmit -p packages/cli/tsconfig.json
+
+  build:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: bun-darwin-arm64
+            artifact: darwin-arm64
+          - target: bun-darwin-x64
+            artifact: darwin-x64
+          - target: bun-linux-arm64
+            artifact: linux-arm64
+          - target: bun-linux-x64-baseline
+            artifact: linux-x64
+          - target: bun-linux-arm64-musl
+            artifact: linux-arm64-musl
+          - target: bun-linux-x64-musl-baseline
+            artifact: linux-x64-musl
+          - target: bun-windows-arm64
+            artifact: windows-arm64
+          - target: bun-windows-x64-baseline
+            artifact: windows-x64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - name: Install every platform-specific OpenTUI package
+        run: bun install --frozen-lockfile --os="*" --cpu="*"
+      - run: bun scripts/build-release.ts ${{ matrix.target }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: binary-${{ matrix.artifact }}
+          path: artifacts/${{ matrix.artifact }}/codexa*
+          if-no-files-found: error
+
+  smoke:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            artifact: darwin-arm64
+            executable: codexa
+          - runner: macos-15-intel
+            artifact: darwin-x64
+            executable: codexa
+          - runner: ubuntu-24.04-arm
+            artifact: linux-arm64
+            executable: codexa
+          - runner: ubuntu-24.04
+            artifact: linux-x64
+            executable: codexa
+          - runner: windows-11-arm
+            artifact: windows-arm64
+            executable: codexa.exe
+          - runner: windows-latest
+            artifact: windows-x64
+            executable: codexa.exe
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - uses: actions/download-artifact@v8
+        with:
+          name: binary-${{ matrix.artifact }}
+          path: smoke
+      - name: Smoke-test native executable
+        shell: bash
+        run: |
+          chmod +x "smoke/${{ matrix.executable }}"
+          bun scripts/smoke-release.ts "smoke/${{ matrix.executable }}" "${GITHUB_REF_NAME#v}"
+
+  smoke-musl:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04-arm
+            artifact: linux-arm64-musl
+          - runner: ubuntu-24.04
+            artifact: linux-x64-musl
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: binary-${{ matrix.artifact }}
+          path: smoke
+      - name: Smoke-test in Alpine Linux
+        run: |
+          chmod +x smoke/codexa
+          docker run --rm -v "$PWD/smoke:/work:ro" alpine:latest sh -ec \
+            'apk add --no-cache libstdc++ libgcc >/dev/null; /work/codexa --version' \
+            | grep "codexa ${GITHUB_REF_NAME#v}"
+
+  publish:
+    needs: [build, smoke, smoke-musl]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: binary-*
+          path: artifacts
+      - name: Normalize downloaded artifact directories
+        run: |
+          for directory in artifacts/binary-*; do
+            target="${directory#artifacts/binary-}"
+            mv "$directory" "artifacts/$target"
+          done
+          chmod +x artifacts/darwin-*/codexa artifacts/linux-*/codexa
+      - name: Package release assets
+        run: bash scripts/package-release.sh "${GITHUB_REF_NAME#v}"
+      - name: Attest release assets
+        uses: actions/attest@v4
+        with:
+          subject-path: "release/*"
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=""
+          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then prerelease="--prerelease"; fi
+          gh release create "$GITHUB_REF_NAME" release/* \
+            --verify-tag \
+            --generate-notes \
+            --title "CODEXA $GITHUB_REF_NAME" \
+            $prerelease
+
+  homebrew:
+    needs: publish
+    if: ${{ vars.HOMEBREW_TAP_REPOSITORY != '' && !contains(github.ref_name, '-') }}
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      - name: Download release checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "$GITHUB_REF_NAME" --pattern SHA256SUMS --dir release
+      - name: Check out Homebrew tap
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ vars.HOMEBREW_TAP_REPOSITORY }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+      - name: Generate formula
+        run: bun scripts/generate-homebrew-formula.ts "${GITHUB_REF_NAME#v}" release/SHA256SUMS homebrew-tap/Formula/codexa.rb
+      - name: Prepare formula update
+        working-directory: homebrew-tap
+        run: |
+          branch="release/${GITHUB_REF_NAME}"
+          git switch -c "$branch"
+          git config user.name "codexa-release-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add Formula/codexa.rb
+          git commit -m "chore: update codexa to ${GITHUB_REF_NAME}"
+      - name: Test formula
+        run: |
+          brew tap codexa/release "$PWD/homebrew-tap"
+          brew style codexa/release/codexa
+          brew audit --strict --online codexa/release/codexa
+          brew install codexa/release/codexa
+          brew test codexa/release/codexa
+      - name: Open formula update pull request
+        working-directory: homebrew-tap
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAP_REPOSITORY: ${{ vars.HOMEBREW_TAP_REPOSITORY }}
+        run: |
+          branch="release/${GITHUB_REF_NAME}"
+          git push --set-upstream origin "$branch"
+          gh pr create --repo "$TAP_REPOSITORY" --base main --head "$branch" \
+            --title "chore: update codexa to ${GITHUB_REF_NAME}" \
+            --body "Automated formula update for CODEXA ${GITHUB_REF_NAME}."

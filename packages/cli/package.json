@@ -1,0 +1,37 @@
+{
+  "name": "@codexa/cli",
+  "version": "0.2.0",
+  "module": "src/index.tsx",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "codexa": "./bin/codexa"
+  },
+  "scripts": {
+    "dev": "bun run --watch src/index.tsx",
+    "build": "bun build src/index.tsx --outdir dist --target bun --packages external"
+  },
+  "devDependencies": {
+    "@codexa/server": "workspace:*",
+    "@types/bun": "latest",
+    "@types/react": "^19.2.17"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@ai-sdk/react": "^4.0.61",
+    "@codexa/shared": "workspace:*",
+    "@opentui/core": "^0.4.3",
+    "@opentui/react": "^0.4.3",
+    "ai": "^7.0.58",
+    "date-fns": "^4.4.0",
+    "hono": "^4.12.28",
+    "open": "^11.0.0",
+    "opentui-spinner": "^0.0.7",
+    "pretty-ms": "^9.3.0",
+    "react": "^19.2.6",
+    "react-router": "^8.2.0",
+    "zod": "^4.4.3"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "@codexa/server",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "test": "bun test",
+    "postinstall": "bun run --cwd ../database db:generate"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.14",
+    "@ai-sdk/mcp": "^2.0.15",
+    "@ai-sdk/openai": "^4.0.13",
+    "@ai-sdk/provider": "^4.0.3",
+    "@ai-sdk/provider-utils": "^5.0.10",
+    "@clerk/backend": "^3.16.1",
+    "@hono/zod-validator": "^0.8.0",
+    "@codexa/database": "workspace:*",
+    "@codexa/shared": "workspace:*",
+    "@polar-sh/sdk": "^0.49.0",
+    "@sentry/bun": "^10.65.0",
+    "@sentry/hono": "^10.65.0",
+    "ai": "^7.0.26",
+    "dotenv": "^17.4.2",
+    "hono": "^4.12.28",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
