@@ -51,8 +51,14 @@ function assertUnsupportedProvider(provider: never): never {
 }
 
 function resolveAnthropicModel(modelId: AnthropicModelId): ResolvedModel {
+  let sdkModelId: string = modelId;
+  if (modelId === "claude-3-5-sonnet") {
+    sdkModelId = "claude-3-5-sonnet-latest";
+  } else if (modelId === "claude-3-5-haiku") {
+    sdkModelId = "claude-3-5-haiku-latest";
+  }
   return {
-    model: anthropic(modelId),
+    model: anthropic(sdkModelId),
     provider: "anthropic",
     modelId,
     providerOptions: ANTHROPIC_PROVIDER_OPTIONS[modelId],
@@ -81,8 +87,14 @@ const OPENAI_PROVIDER_OPTIONS: Partial<Record<OpenAIModelId, ProviderOptions>> =
 };
 
 function resolveOpenAIModel(modelId: OpenAIModelId): ResolvedModel {
+  let sdkModelId: string = modelId;
+  if (modelId === "gpt-4o") {
+    sdkModelId = "gpt-4o";
+  } else if (modelId === "gpt-4o-mini") {
+    sdkModelId = "gpt-4o-mini";
+  }
   return {
-    model: openai(modelId),
+    model: openai(sdkModelId),
     provider: "openai",
     modelId,
     providerOptions: OPENAI_PROVIDER_OPTIONS[modelId],

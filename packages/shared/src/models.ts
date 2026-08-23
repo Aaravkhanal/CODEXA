@@ -37,6 +37,22 @@ export const SUPPORTED_CHAT_MODELS = [
     },
   },
   {
+    id: "claude-3-5-sonnet",
+    provider: "anthropic",
+    pricing: {
+      inputUsdPerMillionTokens: 3,
+      outputUsdPerMillionTokens: 15,
+    },
+  },
+  {
+    id: "claude-3-5-haiku",
+    provider: "anthropic",
+    pricing: {
+      inputUsdPerMillionTokens: 1,
+      outputUsdPerMillionTokens: 5,
+    },
+  },
+  {
     id: "gpt-5.4",
     provider: "openai",
     pricing: {
@@ -58,6 +74,22 @@ export const SUPPORTED_CHAT_MODELS = [
     pricing: {
       inputUsdPerMillionTokens: 0.2,
       outputUsdPerMillionTokens: 1.25,
+    },
+  },
+  {
+    id: "gpt-4o",
+    provider: "openai",
+    pricing: {
+      inputUsdPerMillionTokens: 2.5,
+      outputUsdPerMillionTokens: 10,
+    },
+  },
+  {
+    id: "gpt-4o-mini",
+    provider: "openai",
+    pricing: {
+      inputUsdPerMillionTokens: 0.15,
+      outputUsdPerMillionTokens: 0.6,
     },
   },
 ] as const satisfies readonly SupportedChatModelDefinition[]
