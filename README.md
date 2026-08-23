@@ -1,4 +1,6 @@
-
+<p align="center">
+  <img src="./packages/web/public/og-image.png" alt="CODEXA - open-source terminal coding agent" width="100%" />
+</p>
 
 <p align="center">
   <a href="https://github.com/Aaravkhanal/CODEXA/releases">Releases</a>
