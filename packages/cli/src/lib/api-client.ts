@@ -2,6 +2,7 @@ import { hc } from "hono/client";
 import type { AppType } from "@codexa/server";
 import { clearAuth, getAuth } from "./auth";
 import { getApiUrl } from "./config";
+import { getAllApiKeys } from "./api-keys";
 
 export const apiClient = hc<AppType>(
   getApiUrl(),
@@ -15,6 +16,15 @@ export const apiClient = hc<AppType>(
 
       if (auth) {
         headers.set("Authorization", `Bearer ${auth.token}`);
+      }
+
+      // Attach locally stored provider API keys as headers
+      const storedKeys = getAllApiKeys();
+      if (storedKeys.anthropic) {
+        headers.set("X-Anthropic-Key", storedKeys.anthropic);
+      }
+      if (storedKeys.openai) {
+        headers.set("X-OpenAI-Key", storedKeys.openai);
       }
 
       const response = await fetch(input, { ...init, headers });

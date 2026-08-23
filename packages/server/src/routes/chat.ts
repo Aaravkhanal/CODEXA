@@ -49,7 +49,13 @@ const app = new Hono<AuthenticatedEnv>()
 
       const startTime = Date.now();
       const tools = getToolContracts(mode);
-      const resolvedModel = resolveChatModel(model);
+
+      const clientKeys = {
+        anthropic: c.req.header("X-Anthropic-Key") ?? undefined,
+        openai: c.req.header("X-OpenAI-Key") ?? undefined,
+      };
+
+      const resolvedModel = resolveChatModel(model, clientKeys);
       const previousMessages = Array.isArray(session.messages)
         ? (session.messages as unknown as CodexaUIMessage[])
         : [];

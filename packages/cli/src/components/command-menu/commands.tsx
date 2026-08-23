@@ -7,6 +7,7 @@ import {
   McpDialogContent,
   CodexaLensDialogContent,
 } from "../dialogs";
+import { AddApiKeyDialogContent } from "../dialogs/add-api-key-dialog";
 import { SUPPORTED_CHAT_MODELS } from "@codexa/shared";
 import { performLogin } from "../../lib/oauth";
 import { clearAuth } from "../../lib/auth";
@@ -80,6 +81,17 @@ export const COMMANDS: Command[] = [
         title: "CodexaLens",
         size: "fullscreen",
         children: <CodexaLensDialogContent />,
+      });
+    },
+  },
+  {
+    name: "apikey",
+    description: "Add or update an AI provider API key",
+    value: "/apikey",
+    action: (ctx) => {
+      ctx.dialog.open({
+        title: "Add API Key",
+        children: <AddApiKeyDialogContent />,
       });
     },
   },
