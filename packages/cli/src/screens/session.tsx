@@ -20,6 +20,7 @@ import { getErrorMessage } from "../lib/http-errors";
 import { useKeyboardLayer } from "../providers/keyboard-layer";
 import { useDialog } from "../providers/dialog";
 import { CodexaLensDialogContent } from "../components/dialogs/codexalens-dialog";
+import { AddApiKeyDialogContent } from "../components/dialogs/add-api-key-dialog";
 
 type SessionData = InferResponseType<(typeof apiClient.sessions)[":id"]["$get"], 200>;
 
@@ -120,7 +121,27 @@ function SessionChat({
       {messages.map((msg) => (
         <ChatMessage key={msg.id} msg={msg} />
       ))}
-      {error && <ErrorMessage message={error.message} />}
+      {error && (
+        <box flexDirection="column" gap={1}>
+          <ErrorMessage message={error.message} />
+          {/api-key|api_key|unauthorized|401/i.test(error.message) && (
+            <box
+              flexDirection="row"
+              gap={1}
+              paddingX={1}
+              backgroundColor="red"
+              onMouseDown={() => {
+                dialog.open({
+                  title: `Setup API Key for ${model}`,
+                  children: <AddApiKeyDialogContent initialModelId={model} />,
+                });
+              }}
+            >
+              <text fg="white">› API Key required for model {model}. Click here or run /models to configure key.</text>
+            </box>
+          )}
+        </box>
+      )}
     </SessionShell>
   );
 }

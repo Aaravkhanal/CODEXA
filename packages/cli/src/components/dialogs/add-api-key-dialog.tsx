@@ -1,23 +1,52 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useDialog } from "../../providers/dialog";
 import { useToast } from "../../providers/toast";
-import { setApiKey } from "../../lib/api-keys";
-import type { SupportedProvider } from "@codexa/shared";
+import { setApiKey, hasApiKey } from "../../lib/api-keys";
+import type { SupportedChatModelId, SupportedProvider } from "@codexa/shared";
 import { useTheme } from "../../providers/theme";
+import { usePromptConfig } from "../../providers/prompt-config";
 
 const PROVIDERS: { id: SupportedProvider; label: string; placeholder: string }[] = [
   { id: "anthropic", label: "Anthropic  (claude-*)", placeholder: "sk-ant-api..." },
   { id: "openai", label: "OpenAI     (gpt-*)", placeholder: "sk-proj-..." },
 ];
 
-export function AddApiKeyDialogContent({ onSaved }: { onSaved?: () => void }) {
+export type AddApiKeyDialogContentProps = {
+  initialProvider?: SupportedProvider;
+  initialModelId?: SupportedChatModelId;
+  onSaved?: () => void;
+};
+
+export function AddApiKeyDialogContent({
+  initialProvider,
+  initialModelId,
+  onSaved,
+}: AddApiKeyDialogContentProps) {
   const dialog = useDialog();
   const toast = useToast();
   const { colors } = useTheme();
+  const { setModel } = usePromptConfig();
   const inputRef = useRef<any>(null);
 
-  const [step, setStep] = useState<"select-provider" | "enter-key">("select-provider");
-  const [selectedProvider, setSelectedProvider] = useState<{ id: SupportedProvider; placeholder: string } | null>(null);
+  const defaultProvider =
+    initialProvider ??
+    (initialModelId?.startsWith("claude")
+      ? "anthropic"
+      : initialModelId
+        ? "openai"
+        : null);
+
+  const [step, setStep] = useState<"select-provider" | "enter-key">(
+    defaultProvider ? "enter-key" : "select-provider"
+  );
+  const [selectedProvider, setSelectedProvider] = useState<{
+    id: SupportedProvider;
+    placeholder: string;
+  } | null>(
+    defaultProvider
+      ? PROVIDERS.find((p) => p.id === defaultProvider) ?? PROVIDERS[0]!
+      : null
+  );
   const [selectedIdx, setSelectedIdx] = useState(0);
 
   const handleSelectProvider = useCallback((provider: typeof PROVIDERS[number]) => {
@@ -31,10 +60,16 @@ export function AddApiKeyDialogContent({ onSaved }: { onSaved?: () => void }) {
       return;
     }
     setApiKey(selectedProvider.id, rawKey.trim());
-    toast.show({ variant: "success", message: `${selectedProvider.id} API key saved to ~/.codexa/api-keys.json` });
+    if (initialModelId) {
+      setModel(initialModelId);
+    }
+    toast.show({
+      variant: "success",
+      message: `${selectedProvider.id} API key saved to ~/.codexa/api-keys.json`,
+    });
     dialog.close();
     onSaved?.();
-  }, [selectedProvider, dialog, toast, onSaved]);
+  }, [selectedProvider, initialModelId, setModel, dialog, toast, onSaved]);
 
   useEffect(() => {
     if (step === "enter-key" && inputRef.current) {
@@ -45,23 +80,32 @@ export function AddApiKeyDialogContent({ onSaved }: { onSaved?: () => void }) {
   if (step === "select-provider") {
     return (
       <box flexDirection="column" gap={1} paddingX={2} paddingY={1}>
-        <text>Select provider:</text>
-        {PROVIDERS.map(({ id, label }, i) => (
-          <box
-            key={id}
-            flexDirection="row"
-            gap={1}
-            height={1}
-            backgroundColor={selectedIdx === i ? colors.selection : undefined}
-            onMouseMove={() => setSelectedIdx(i)}
-            onMouseDown={() => handleSelectProvider(PROVIDERS[i]!)}
-          >
-            <text fg="cyan">›</text>
-            <text fg="white">{label}</text>
-          </box>
-        ))}
+        <text fg="cyan" attributes={1}>Setup AI Model Agent & API Keys</text>
+        <text>Select AI Provider / Model Family:</text>
+        {PROVIDERS.map(({ id, label }, i) => {
+          const isSaved = hasApiKey(id);
+          return (
+            <box
+              key={id}
+              flexDirection="row"
+              gap={1}
+              height={1}
+              backgroundColor={selectedIdx === i ? colors.selection : undefined}
+              onMouseMove={() => setSelectedIdx(i)}
+              onMouseDown={() => handleSelectProvider(PROVIDERS[i]!)}
+            >
+              <text fg="cyan">›</text>
+              <text fg="white">{label}</text>
+              {isSaved ? (
+                <text fg="green">  ✓ Key Configured</text>
+              ) : (
+                <text fg="yellow">  ! Key Required</text>
+              )}
+            </box>
+          );
+        })}
         <text attributes={2} fg="gray">
-          Keys stored in ~/.codexa/api-keys.json (mode 0600)
+          Keys stored locally in ~/.codexa/api-keys.json (mode 0600)
         </text>
       </box>
     );
@@ -69,6 +113,9 @@ export function AddApiKeyDialogContent({ onSaved }: { onSaved?: () => void }) {
 
   return (
     <box flexDirection="column" gap={1} paddingX={2} paddingY={1}>
+      <text fg="cyan" attributes={1}>
+        Setup {selectedProvider?.id.toUpperCase()} API Key
+      </text>
       <text>
         Paste your <text fg="cyan">{selectedProvider?.id}</text> API key and press Enter:
       </text>

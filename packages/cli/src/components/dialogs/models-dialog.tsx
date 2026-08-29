@@ -21,14 +21,28 @@ export const ModelsDialogContent = ({
     const handleSelect = useCallback(
         (modelId: SupportedChatModelId) => {
             onSelectModel(modelId);
-            dialog.close();
+            const provider = modelId.startsWith("claude") ? "anthropic" : "openai";
+            if (!hasApiKey(provider)) {
+                dialog.open({
+                    title: `Configure API Key for ${modelId}`,
+                    children: (
+                        <AddApiKeyDialogContent
+                            initialModelId={modelId}
+                            onSaved={() => dialog.close()}
+                        />
+                    ),
+                });
+            } else {
+                toast.show({ variant: "info", message: `Selected AI model ${modelId}` });
+                dialog.close();
+            }
         },
-        [onSelectModel, dialog],
+        [onSelectModel, dialog, toast],
     );
 
     const openAddApiKey = useCallback(() => {
         dialog.open({
-            title: "Add API Key",
+            title: "Setup AI Model & API Key",
             children: <AddApiKeyDialogContent />,
         });
     }, [dialog]);
