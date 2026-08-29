@@ -1,9 +1,14 @@
 import { createMiddleware } from "hono/factory";
 import type { AuthenticatedEnv } from "./require-auth";
-import { getAvailableCreditsBalance } from "../lib/polar";
+import { getAvailableCreditsBalance, isPolarConfigured } from "../lib/polar";
 
 export const requireCreditsBalance = createMiddleware<AuthenticatedEnv>(
   async (c, next) => {
+    if (!isPolarConfigured()) {
+      await next();
+      return;
+    }
+
     try {
       const userId = c.get("userId");
       const creditsBalance = await getAvailableCreditsBalance(userId);

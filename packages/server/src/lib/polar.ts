@@ -37,6 +37,10 @@ export function getPolarServer(): PolarServer {
   return server;
 }
 
+export function isPolarConfigured(): boolean {
+  return Boolean(process.env.POLAR_ACCESS_TOKEN && process.env.POLAR_CREDITS_METER_ID);
+}
+
 let polarClient: Polar | undefined;
 
 function getPolarClient() {

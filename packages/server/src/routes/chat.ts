@@ -13,7 +13,7 @@ import { buildSystemPrompt } from "../system-prompt";
 import type { AuthenticatedEnv } from "../middleware/require-auth";
 import { requireCreditsBalance } from "../middleware/require-credits-balance";
 import { calculateCreditsForUsage } from "../lib/credits";
-import { ingestAiUsage } from "../lib/polar";
+import { ingestAiUsage, isPolarConfigured } from "../lib/polar";
 import { resolveChatModel } from "../lib/models";
 import {
   hasPendingToolCalls,
@@ -123,7 +123,7 @@ const app = new Hono<AuthenticatedEnv>()
               messages: event.messages as unknown as Prisma.InputJsonValue,
             }
           });
-          if(!completedUsage) return;
+          if(!completedUsage || !isPolarConfigured()) return;
 
           try {
             const billableUsage = calculateCreditsForUsage({
