@@ -37,7 +37,7 @@ export function AddApiKeyDialogContent({ onSaved }: { onSaved?: () => void }) {
   }, [selectedProvider, dialog, toast, onSaved]);
 
   useEffect(() => {
-    if (inputRef.current) {
+    if (step === "enter-key" && inputRef.current) {
       inputRef.current.focus?.();
     }
   }, [step]);
@@ -82,8 +82,6 @@ export function AddApiKeyDialogContent({ onSaved }: { onSaved?: () => void }) {
             handleSave(val.replace(/\n/g, "").trim());
           }
         }}
-        borderStyle="single"
-        borderColor="cyan"
         width={60}
       />
       <text attributes={2} fg="gray">

@@ -14,6 +14,7 @@ import {
     type SupportedChatModelId,
     type ToolContracts,
 } from "@codexa/shared";
+import { getAllApiKeys } from "../lib/api-keys";
 import { apiClient } from "../lib/api-client";
 import { getAuth } from "../lib/auth";
 import { executeLocalTool } from "../lib/local-tools";
@@ -79,7 +80,18 @@ export function useChat(sessionId: string, initialMessages: Message[]) {
             api: apiClient.chat.$url().toString(),
             headers() {
                 const auth = getAuth();
-                return auth ? { Authorization: `Bearer ${auth.token}` } : new Headers();
+                const headers = new Headers();
+                if (auth) {
+                    headers.set("Authorization", `Bearer ${auth.token}`);
+                }
+                const storedKeys = getAllApiKeys();
+                if (storedKeys.anthropic) {
+                    headers.set("X-Anthropic-Key", storedKeys.anthropic);
+                }
+                if (storedKeys.openai) {
+                    headers.set("X-OpenAI-Key", storedKeys.openai);
+                }
+                return headers;
             },
             prepareSendMessagesRequest({ messages }) {
                 const message = messages[messages.length - 1];
@@ -89,19 +101,14 @@ export function useChat(sessionId: string, initialMessages: Message[]) {
                     (m) => m.metadata?.mode && m.metadata?.model
                 )?.metadata;
 
-                const previousMessage = messages[messages.length - 1];
-                const requestMessages = message.role === "assistant" && previousMessage?.role === "user"
-                    ? [previousMessage, message]
-                    : [message];
-
                 return {
                     body: {
                         id: sessionId,
-                        messages: requestMessages,
+                        messages,
                         mode: message.metadata?.mode || metadata?.mode,
                         model: message.metadata?.model || metadata?.model,
                     },
-                }
+                };
             }
         })
     }, [sessionId]);
