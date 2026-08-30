@@ -49,6 +49,16 @@ const result = await Bun.build({
     CODEXA_VERSION: JSON.stringify(version),
     CODEXA_OPENTUI_LIBC: JSON.stringify(isMusl ? "musl" : ""),
   },
+  external: [
+    "@opentui/core-darwin-arm64",
+    "@opentui/core-darwin-x64",
+    "@opentui/core-linux-arm64",
+    "@opentui/core-linux-arm64-musl",
+    "@opentui/core-linux-x64",
+    "@opentui/core-linux-x64-musl",
+    "@opentui/core-windows-arm64",
+    "@opentui/core-windows-x64",
+  ],
   compile: {
     target,
     outfile: outputPath,
