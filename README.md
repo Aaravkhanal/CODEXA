@@ -41,6 +41,27 @@ database package, and a Vite-powered landing page.
 
 ## Install
 
+### Clone & Run Directly
+
+Anyone can clone this repository and run CODEXA locally without setting up an external database or server:
+
+```sh
+# 1. Clone the repository
+git clone https://github.com/Aaravkhanal/CODEXA.git
+cd CODEXA
+
+# 2. Install locked dependencies (requires Bun 1.3+)
+bun install --frozen-lockfile
+
+# 3. Launch the terminal client directly
+bun run dev:cli
+
+# Or build a local standalone binary executable for your platform:
+bun run release:build
+```
+
+When launched, the CLI displays the **Agent & AI Model Configuration** section. Simply enter your Anthropic or OpenAI API key to start interacting immediately!
+
 ### Homebrew
 
 ```sh
@@ -113,6 +134,14 @@ codexa --version
 > [!NOTE]
 > The `/upgrade` command manages CODEXA billing. It does not update the CLI.
 
+## Agent & AI Model Configuration
+
+When CODEXA starts, the home screen features an **Agent & AI Model Configuration** panel at the top:
+
+- **Agent Model Selection**: Choose your preferred AI model (`claude-sonnet-4-6`, `gpt-5.4`, `claude-opus-4-6`, `gpt-4o`, etc.).
+- **Local API Key Storage**: Keys are stored locally in `~/.codexa/api-keys.json` with restricted permissions (`0600`).
+- **Interactive Setup**: Select **🔑 Configure API Key** or **🤖 Switch Agent Model** at any time to update your provider keys or switch model agents.
+
 ## Usage
 
 Start CODEXA from inside any project directory:
@@ -128,7 +157,7 @@ Common commands:
 | --- | --- |
 | `/new` | Start a new conversation |
 | `/agents` | Switch between PLAN and BUILD agents |
-| `/models` | Select the AI model |
+| `/models` | Select the AI model & update API keys |
 | `/sessions` | Browse previous sessions |
 | `/lens` | Explore the local codebase and inspect agent activity |
 | `/neolens` | Alias for `/lens` — explore code and replay activity |
