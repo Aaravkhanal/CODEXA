@@ -97,14 +97,12 @@ export function Home() {
             )}
           </box>
 
-          <box flexDirection="row" gap={2} alignItems="center">
-            <text fg="white">
-              Agent Model: <text fg={colors.info} attributes={TextAttributes.BOLD}>{model}</text>
-            </text>
-            <text fg={colors.dimSeparator}>|</text>
-            <text fg="white">
-              Provider: <text fg="yellow">{provider}</text>
-            </text>
+          <box flexDirection="row" gap={1} alignItems="center">
+            <text fg="white">Agent Model: </text>
+            <text fg={colors.info} attributes={TextAttributes.BOLD}>{model}</text>
+            <text fg={colors.dimSeparator}> | </text>
+            <text fg="white">Provider: </text>
+            <text fg="yellow">{provider}</text>
           </box>
 
           <box flexDirection="row" gap={2} marginTop={1}>
