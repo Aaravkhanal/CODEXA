@@ -379,7 +379,7 @@ export function CodexaLensDialogContent({ sessionId: explicitSessionId }: { sess
                   backgroundColor={selected ? colors.selection : undefined}
                   onMouseMove={() => setReplayIndex(index)}
                 >
-                  <box flexDirection="row" gap={1} selectable={false}>
+                  <box flexDirection="row" gap={1}>
                     <text fg={selected ? "black" : color}>{`${String(index + 1).padStart(3)}  ${STATUS_ICON[event.status]} ${formatDuration(event.offsetMs).padStart(8)}  ${event.summary}`}</text>
                     <text attributes={TextAttributes.DIM}>{`· ${event.phase} · ${event.toolName}`}</text>
                   </box>
@@ -429,7 +429,7 @@ export function CodexaLensDialogContent({ sessionId: explicitSessionId }: { sess
                   backgroundColor={selected ? colors.selection : undefined}
                   onMouseMove={() => setSelectedNodeId(node.id)}
                 >
-                  <box flexDirection="row" gap={1} selectable={false}>
+                  <box flexDirection="row" gap={1}>
                     <text fg={selected ? "black" : color}>{`${status ? STATUS_ICON[status] : node.kind === "mcp" ? "◇" : "○"} ${label}`}</text>
                     {connection ? <text attributes={TextAttributes.DIM}>{connection}</text> : null}
                   </box>

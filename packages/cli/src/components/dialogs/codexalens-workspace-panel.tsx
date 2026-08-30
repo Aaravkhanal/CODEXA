@@ -274,7 +274,7 @@ export function CodexaLensWorkspacePanel({
               <scrollbox ref={previewRef} height={codeViewportHeight}>
                 {codeLines.map((line, index) => (
                   <box key={index} height={1} overflow="hidden" backgroundColor={focus === "code" && index === previewLine ? colors.selection : undefined}>
-                    <box flexDirection="row" selectable>
+                    <box flexDirection="row">
                       <text attributes={TextAttributes.DIM} fg={focus === "code" && index === previewLine ? "black" : undefined}>{String(index + 1).padStart(5)} │ </text>
                       <text fg={focus === "code" && index === previewLine ? "black" : undefined}>{sanitizeTerminalText(line)}</text>
                     </box>

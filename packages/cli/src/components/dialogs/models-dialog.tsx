@@ -60,7 +60,7 @@ export const ModelsDialogContent = ({
                     const provider = modelId.startsWith("claude") ? "anthropic" : "openai";
                     const hasKey = provider === "anthropic" ? anthropicSaved : openaiSaved;
                     return (
-                        <box flexDirection="row" gap={1} selectable={false}>
+                        <box flexDirection="row" gap={1}>
                             <text fg={isSelected ? "black" : "white"}>{modelId}</text>
                             {hasKey ? <text fg="green">✓ key set</text> : null}
                         </box>
