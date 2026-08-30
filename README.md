@@ -3,10 +3,6 @@
 </p>
 
 <p align="center">
-  <img src="./docs/assets/codexa-terminal-demo.jpg" alt="CODEXA Terminal Agent in Action" width="100%" />
-</p>
-
-<p align="center">
   <a href="https://github.com/Aaravkhanal/CODEXA/releases">Releases</a>
   ·
   <a href="./docs/RELEASING.md">Release Guide</a>
