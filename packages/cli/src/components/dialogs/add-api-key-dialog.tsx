@@ -113,9 +113,7 @@ export function AddApiKeyDialogContent({
 
   return (
     <box flexDirection="column" gap={1} paddingX={2} paddingY={1}>
-      <text fg="cyan" attributes={1}>
-        Setup {selectedProvider?.id.toUpperCase()} API Key
-      </text>
+      <text fg="cyan" attributes={1}>{`Setup ${selectedProvider?.id?.toUpperCase() ?? ""} API Key`}</text>
       <box flexDirection="row" gap={1}>
         <text fg="white">Paste your</text>
         <text fg="cyan">{selectedProvider?.id}</text>
