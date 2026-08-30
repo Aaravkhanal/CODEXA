@@ -341,18 +341,18 @@ export function CodexaLensDialogContent({ sessionId: explicitSessionId }: { sess
       ) : view === "timeline" ? (
         <box flexDirection="column" flexGrow={1} minHeight={0} gap={1}>
           <box flexDirection="row" justifyContent="space-between">
-            <text>
-              <span fg={replayEnabled ? colors.info : colors.success}>● {replayEnabled ? "REPLAY" : "LIVE"}</span>
-              <span attributes={TextAttributes.DIM}>{` · ${completedEvents.length} completed events`}</span>
-            </text>
+            <box flexDirection="row" gap={1}>
+              <text fg={replayEnabled ? colors.info : colors.success}>{`● ${replayEnabled ? "REPLAY" : "LIVE"}`}</text>
+              <text attributes={TextAttributes.DIM}>{`· ${completedEvents.length} completed events`}</text>
+            </box>
             <text attributes={TextAttributes.DIM}>{snapshot.cwd}</text>
           </box>
           <box flexDirection="row" gap={3} paddingY={1}>
-            <text><span fg={colors.primary}>{modifiedPaths.size}</span> files changed</text>
-            <text><span fg={failedEvents.length ? colors.error : colors.success}>{failedEvents.length}</span> failures</text>
-            <text><span fg={colors.info}>{formatDuration(durationMs)}</span> elapsed</text>
-            <text><span fg={colors.info}>{formatTokens(snapshot.metrics.totalTokens)}</span> tokens</text>
-            <text><span fg={colors.success}>{formatCost(snapshot.metrics.estimatedCostUsd)}</span> est.</text>
+            <box flexDirection="row" gap={1}><text fg={colors.primary}>{modifiedPaths.size}</text><text>files changed</text></box>
+            <box flexDirection="row" gap={1}><text fg={failedEvents.length ? colors.error : colors.success}>{failedEvents.length}</text><text>failures</text></box>
+            <box flexDirection="row" gap={1}><text fg={colors.info}>{formatDuration(durationMs)}</text><text>elapsed</text></box>
+            <box flexDirection="row" gap={1}><text fg={colors.info}>{formatTokens(snapshot.metrics.totalTokens)}</text><text>tokens</text></box>
+            <box flexDirection="row" gap={1}><text fg={colors.success}>{formatCost(snapshot.metrics.estimatedCostUsd)}</text><text>est.</text></box>
           </box>
           <text attributes={TextAttributes.DIM}>
             {snapshot.metrics.models.length > 0
@@ -379,10 +379,10 @@ export function CodexaLensDialogContent({ sessionId: explicitSessionId }: { sess
                   backgroundColor={selected ? colors.selection : undefined}
                   onMouseMove={() => setReplayIndex(index)}
                 >
-                  <text selectable={false} fg={selected ? "black" : color}>
-                    {String(index + 1).padStart(3)}  {STATUS_ICON[event.status]} {formatDuration(event.offsetMs).padStart(8)}  {event.summary}
-                    <span attributes={TextAttributes.DIM}> · {event.phase} · {event.toolName}</span>
-                  </text>
+                  <box flexDirection="row" gap={1} selectable={false}>
+                    <text fg={selected ? "black" : color}>{`${String(index + 1).padStart(3)}  ${STATUS_ICON[event.status]} ${formatDuration(event.offsetMs).padStart(8)}  ${event.summary}`}</text>
+                    <text attributes={TextAttributes.DIM}>{`· ${event.phase} · ${event.toolName}`}</text>
+                  </box>
                 </box>
               );
             })}
@@ -392,13 +392,11 @@ export function CodexaLensDialogContent({ sessionId: explicitSessionId }: { sess
       ) : (
       <>
       <box flexDirection="row" justifyContent="space-between">
-        <text>
-          <span fg={replayEnabled ? colors.info : colors.success}>● {replayEnabled ? "REPLAY" : "LIVE"}</span>
-          <span attributes={TextAttributes.DIM}> · {nodes.length} nodes · {edges.length} edges</span>
-        </text>
-        <text attributes={TextAttributes.DIM}>
-          {snapshot.graph.truncated ? "first 500 files · " : ""}{snapshot.cwd}
-        </text>
+        <box flexDirection="row" gap={1}>
+          <text fg={replayEnabled ? colors.info : colors.success}>{`● ${replayEnabled ? "REPLAY" : "LIVE"}`}</text>
+          <text attributes={TextAttributes.DIM}>{`· ${nodes.length} nodes · ${edges.length} edges`}</text>
+        </box>
+        <text attributes={TextAttributes.DIM}>{`${snapshot.graph.truncated ? "first 500 files · " : ""}${snapshot.cwd}`}</text>
       </box>
 
       <box flexDirection="row" flexGrow={1} minHeight={0} gap={2}>
@@ -431,10 +429,10 @@ export function CodexaLensDialogContent({ sessionId: explicitSessionId }: { sess
                   backgroundColor={selected ? colors.selection : undefined}
                   onMouseMove={() => setSelectedNodeId(node.id)}
                 >
-                  <text selectable={false} fg={selected ? "black" : color}>
-                    {status ? STATUS_ICON[status] : node.kind === "mcp" ? "◇" : "○"} {label}
-                    <span attributes={TextAttributes.DIM}>{connection}</span>
-                  </text>
+                  <box flexDirection="row" gap={1} selectable={false}>
+                    <text fg={selected ? "black" : color}>{`${status ? STATUS_ICON[status] : node.kind === "mcp" ? "◇" : "○"} ${label}`}</text>
+                    {connection ? <text attributes={TextAttributes.DIM}>{connection}</text> : null}
+                  </box>
                 </box>
               );
             })}
@@ -452,16 +450,14 @@ export function CodexaLensDialogContent({ sessionId: explicitSessionId }: { sess
                   : `${outgoing.length} imports · ${incoming.length} dependents`}
               </text>
               {selectedActivity ? (
-                <text>{STATUS_ICON[selectedActivity.status]} {selectedActivity.summary}</text>
+                <text>{`${STATUS_ICON[selectedActivity.status]} ${selectedActivity.summary}`}</text>
               ) : (
                 <text attributes={TextAttributes.DIM}>No agent activity yet.</text>
               )}
               <box flexDirection="column" paddingTop={1}>
                 <text attributes={TextAttributes.BOLD}>Connections</text>
                 {[...outgoing, ...incoming].slice(0, 8).map((edge) => (
-                  <text key={`${edge.source}:${edge.target}:${edge.kind}`} attributes={TextAttributes.DIM}>
-                    {edge.source === selectedNode.id ? "→" : "←"} {edge.source === selectedNode.id ? edge.target : edge.source}
-                  </text>
+                  <text key={`${edge.source}:${edge.target}:${edge.kind}`} attributes={TextAttributes.DIM}>{`${edge.source === selectedNode.id ? "→" : "←"} ${edge.source === selectedNode.id ? edge.target : edge.source}`}</text>
                 ))}
                 {outgoing.length + incoming.length === 0 ? (
                   <text attributes={TextAttributes.DIM}>No resolved TypeScript imports.</text>
@@ -473,10 +469,10 @@ export function CodexaLensDialogContent({ sessionId: explicitSessionId }: { sess
       </box>
 
       <box flexDirection="column" border={["top"]} borderColor={colors.dimSeparator} paddingTop={1}>
-        <text>
-          Timeline {timeline.length === 0 ? "0/0" : `${replayIndex + 1}/${timeline.length}`}
-          <span attributes={TextAttributes.DIM}> · {currentEvent?.summary ?? "Waiting for agent tool activity"}</span>
-        </text>
+        <box flexDirection="row" gap={1}>
+          <text>{`Timeline ${timeline.length === 0 ? "0/0" : `${replayIndex + 1}/${timeline.length}`}`}</text>
+          <text attributes={TextAttributes.DIM}>{`· ${currentEvent?.summary ?? "Waiting for agent tool activity"}`}</text>
+        </box>
         <text attributes={TextAttributes.DIM}>↑↓/jk navigate · enter open file · ←→ replay · r live/replay · g refresh · esc close</text>
       </box>
       </>

@@ -108,10 +108,10 @@ export function McpDialogContent() {
 
       {selectedServer && (
         <box flexDirection="column" paddingTop={1} gap={1}>
-          <text>
-            {selectedServer.serverInfo?.title ?? selectedServer.serverInfo?.name ?? selectedServer.name}
-            <span attributes={TextAttributes.DIM}> · {selectedServer.transport}</span>
-          </text>
+          <box flexDirection="row" gap={1}>
+            <text>{selectedServer.serverInfo?.title ?? selectedServer.serverInfo?.name ?? selectedServer.name}</text>
+            <text attributes={TextAttributes.DIM}>{`· ${selectedServer.transport}`}</text>
+          </box>
 
           {selectedServer.error ? (
             <text fg="red">{selectedServer.error}</text>
@@ -120,14 +120,13 @@ export function McpDialogContent() {
           ) : (
             <box flexDirection="column">
               {selectedServer.tools.slice(0, 6).map((tool) => (
-                <text key={tool.name} attributes={TextAttributes.DIM}>
-                  {tool.access === "read" ? "R" : tool.access === "write" ? "W" : "-"} {tool.title ?? tool.name}
-                </text>
+                <box key={tool.name} flexDirection="row" gap={1}>
+                  <text attributes={TextAttributes.DIM}>{tool.access === "read" ? "R" : tool.access === "write" ? "W" : "-"}</text>
+                  <text attributes={TextAttributes.DIM}>{tool.title ?? tool.name}</text>
+                </box>
               ))}
               {selectedServer.tools.length > 6 && (
-                <text attributes={TextAttributes.DIM}>
-                  +{selectedServer.tools.length - 6} more tools
-                </text>
+                <text attributes={TextAttributes.DIM}>{`+${selectedServer.tools.length - 6} more tools`}</text>
               )}
             </box>
           )}

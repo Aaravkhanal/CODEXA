@@ -107,16 +107,17 @@ export function BotMessage({
                   width="100%"
                   paddingX={2}
                 >
-                  <text attributes={TextAttributes.DIM}>
-                    <em fg={colors.info}>{formatToolName(toolName)}</em>:{" "}
-                    {formatToolArgs(part)}
-                    {part.state !== "output-available" && part.state !== "output-error" 
-                      ? "..." 
-                      : ""
-                    }
-                    {part.state === "output-error" ? ` ${part.errorText}` : ""} 
-                      
-                  </text>
+                  <box flexDirection="row" gap={1}>
+                    <text attributes={TextAttributes.DIM} fg={colors.info}>{formatToolName(toolName)}:</text>
+                    <text attributes={TextAttributes.DIM}>
+                      {formatToolArgs(part)}
+                      {part.state !== "output-available" && part.state !== "output-error"
+                        ? "..."
+                        : ""
+                      }
+                      {part.state === "output-error" ? ` ${part.errorText}` : ""}
+                    </text>
+                  </box>
                 </box>
               );
             }

@@ -214,15 +214,11 @@ export function CodexaLensWorkspacePanel({
   return (
     <box flexDirection="column" flexGrow={1} minHeight={0} gap={1}>
       <box flexDirection="row" justifyContent="space-between">
-        <text>
-          <span fg={colors.success}>● LOCAL</span>
-          <span attributes={TextAttributes.DIM}>
-            {` · ${index?.files.length ?? 0} files · read-only`}
-          </span>
-        </text>
-        <text attributes={TextAttributes.DIM}>
-          {index?.truncated ? "index capped · " : ""}{index?.ignoredCount ?? 0} ignored
-        </text>
+        <box flexDirection="row" gap={1}>
+          <text fg={colors.success}>● LOCAL</text>
+          <text attributes={TextAttributes.DIM}>{`· ${index?.files.length ?? 0} files · read-only`}</text>
+        </box>
+        <text attributes={TextAttributes.DIM}>{`${index?.truncated ? "index capped · " : ""}${index?.ignoredCount ?? 0} ignored`}</text>
       </box>
 
       <box height={1} paddingX={1} backgroundColor={searchMode ? colors.selection : undefined}>
@@ -278,17 +274,14 @@ export function CodexaLensWorkspacePanel({
               <scrollbox ref={previewRef} height={codeViewportHeight}>
                 {codeLines.map((line, index) => (
                   <box key={index} height={1} overflow="hidden" backgroundColor={focus === "code" && index === previewLine ? colors.selection : undefined}>
-                    <text
-                      selectable
-                      fg={focus === "code" && index === previewLine ? "black" : undefined}
-                    >
-                      <span attributes={TextAttributes.DIM}>{String(index + 1).padStart(5)} │ </span>
-                      {sanitizeTerminalText(line)}
-                    </text>
+                    <box flexDirection="row" selectable>
+                      <text attributes={TextAttributes.DIM} fg={focus === "code" && index === previewLine ? "black" : undefined}>{String(index + 1).padStart(5)} │ </text>
+                      <text fg={focus === "code" && index === previewLine ? "black" : undefined}>{sanitizeTerminalText(line)}</text>
+                    </box>
                   </box>
                 ))}
                 {codeLines.length >= MAX_RENDERED_CODE_LINES ? (
-                  <text attributes={TextAttributes.DIM}>… preview limited to {MAX_RENDERED_CODE_LINES} lines</text>
+                  <text attributes={TextAttributes.DIM}>{`… preview limited to ${MAX_RENDERED_CODE_LINES} lines`}</text>
                 ) : null}
               </scrollbox>
             </>
