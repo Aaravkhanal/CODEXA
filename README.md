@@ -3,6 +3,10 @@
 </p>
 
 <p align="center">
+  <img src="./docs/assets/codexa-terminal-demo.jpg" alt="CODEXA Terminal Agent in Action" width="100%" />
+</p>
+
+<p align="center">
   <a href="https://github.com/Aaravkhanal/CODEXA/releases">Releases</a>
   ·
   <a href="./docs/RELEASING.md">Release Guide</a>
@@ -137,6 +141,10 @@ codexa --version
 ## Agent & AI Model Configuration
 
 When CODEXA starts, the home screen features an **Agent & AI Model Configuration** panel at the top:
+
+<p align="center">
+  <img src="./docs/assets/codexa-terminal-demo.jpg" alt="CODEXA Agent & AI Model Banner" width="90%" />
+</p>
 
 - **Agent Model Selection**: Choose your preferred AI model (`claude-sonnet-4-6`, `gpt-5.4`, `claude-opus-4-6`, `gpt-4o`, etc.).
 - **Local API Key Storage**: Keys are stored locally in `~/.codexa/api-keys.json` with restricted permissions (`0600`).
