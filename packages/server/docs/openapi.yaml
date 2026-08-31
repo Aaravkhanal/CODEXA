@@ -1,0 +1,402 @@
+openapi: 3.1.0
+info:
+  title: CODEXA API Server
+  version: 0.2.0
+  description: |
+    API specifications for the CODEXA Server backend.
+    
+    This backend provides routes for Clerk authentication lookup, chat session persistence, SSE LLM chat streaming, Polar payment sandbox interfaces, and CodexaLens workspace dependency indexing.
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /auth/config:
+    get:
+      summary: Retrieve auth configuration
+      description: Returns the Clerk frontend API and OAuth Client ID credentials.
+      security: []
+      responses:
+        '200':
+          description: Clerk configuration data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clerkFrontendApi:
+                    type: string
+                  clientId:
+                    type: string
+                required:
+                  - clerkFrontendApi
+                  - clientId
+        '503':
+          description: Auth is not configured on the server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/callback:
+    get:
+      summary: OAuth callback redirect endpoint
+      description: Processes Clerk redirect code and redirects back to the CLI port inside state.
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: error
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: error_description
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirects back to CLI localhost server callback endpoint
+        '400':
+          description: Invalid authorization parameters or missing fields
+
+  /sessions:
+    get:
+      summary: List user sessions
+      description: Returns a list of all chat sessions associated with the authenticated user.
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SessionSummary'
+    post:
+      summary: Create a new session
+      description: Initializes a new chat session linked to a local project directory workspace.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: User-facing title for the session
+                cwd:
+                  type: string
+                  description: Absolute path of local project directory
+              required:
+                - title
+                - cwd
+      responses:
+        '201':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionDetail'
+        '400':
+          description: Invalid request body
+        '402':
+          description: Insufficient credit balance
+
+  /sessions/{id}:
+    get:
+      summary: Get session details
+      description: Retrieves the detailed configuration, metadata, and full message history of a specific session.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detailed session data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionDetail'
+        '404':
+          description: Session not found
+
+  /chat:
+    post:
+      summary: Start a streaming AI chat completion
+      description: Sends message history to the AI model and streams back a SSE response containing text increments, tool execution activities, and final token usage statistics.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Session ID
+                messages:
+                  type: array
+                  items:
+                    type: object
+                    description: Input UI messages
+                mode:
+                  type: string
+                  enum: [BUILD, PLAN]
+                model:
+                  type: string
+                  description: Model ID to use (e.g. claude-3-5-sonnet, gpt-4o)
+              required:
+                - id
+                - messages
+                - mode
+                - model
+      responses:
+        '200':
+          description: Server-Sent Events stream of events
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          description: Invalid request body
+        '402':
+          description: Insufficient credit balance
+        '404':
+          description: Session not found
+
+  /mcp/{sessionId}:
+    get:
+      summary: Inspect Model Context Protocol (MCP) servers
+      description: Scans the session's workspace `cwd` and returns running status and tools list of active MCP servers.
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Active MCP servers configurations and status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  servers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        status:
+                          type: string
+                          enum: [connected, disconnected, error]
+                        transport:
+                          type: string
+        '404':
+          description: Session not found
+        '409':
+          description: Session has no project directory configuration
+        '422':
+          description: Failed parsing MCP configurations
+
+  /codexalens/{sessionId}:
+    get:
+      summary: Retrieve CodexaLens activity trace and dependency graph
+      description: Resolves file dependency links, node statuses, and activity timeline metrics recorded during chat executions.
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: CodexaLens activity graph data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodexaLensData'
+        '404':
+          description: Session not found
+
+  /billing/checkout:
+    post:
+      summary: Generate checkout link
+      description: Returns a Polar checkout checkout sandbox URL to purchase subscription credits.
+      responses:
+        '200':
+          description: Polar checkout link URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+
+  /billing/portal:
+    post:
+      summary: Generate customer billing portal link
+      description: Returns a customer portal portal URL to manage checkout credentials and logs.
+      responses:
+        '200':
+          description: Polar portal portal link URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+
+  /billing/success:
+    get:
+      summary: Successful billing notification page
+      description: Displays simple confirmation page after successful subscription checkout.
+      security: []
+      responses:
+        '200':
+          description: Confirmation HTML / Text response
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SessionSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - createdAt
+
+    SessionDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        cwd:
+          type: string
+        messages:
+          type: array
+          items:
+            type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - cwd
+        - messages
+        - createdAt
+        - updatedAt
+
+    CodexaLensData:
+      type: object
+      properties:
+        traceSchemaVersion:
+          type: integer
+        cwd:
+          type: string
+        graph:
+          type: object
+          properties:
+            nodes:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  kind:
+                    type: string
+                  label:
+                    type: string
+                  status:
+                    type: string
+            edges:
+              type: array
+              items:
+                type: object
+                properties:
+                  source:
+                    type: string
+                  target:
+                    type: string
+                  kind:
+                    type: string
+            truncated:
+              type: boolean
+        timeline:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              toolCallId:
+                type: string
+              toolName:
+                type: string
+              phase:
+                type: string
+                enum: [started, completed]
+              status:
+                type: string
+              filePaths:
+                type: array
+                items:
+                  type: string
+              timestampMs:
+                type: number
+              offsetMs:
+                type: number
+              summary:
+                type: string
+        metrics:
+          type: object

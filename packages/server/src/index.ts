@@ -9,8 +9,14 @@ import mcp from "./routes/mcp";
 import auth from "./routes/auth";
 import codexalens from "./routes/codexalens";
 import billing from "./routes/billing";
+import { validateEnv } from "@codexa/shared";
+
+// Validate environment variables before any app logic runs.
+// This throws with a human-readable message on misconfiguration.
+validateEnv();
 
 const app = new Hono();
+
 
 const sentryDsn = process.env.SENTRY_DSN;
 if (sentryDsn) {
@@ -65,7 +71,25 @@ const routes = app
   .route("/codexalens", codexalens)
   .route("/billing", billing);
 
+// Dev-only endpoint to serve OpenAPI YAML documentation
+if (process.env.NODE_ENV !== "production") {
+  app.get("/docs", async (c) => {
+    try {
+      const specPath = import.meta.dir + "/../docs/openapi.yaml";
+      const file = Bun.file(specPath);
+      if (!(await file.exists())) {
+        return c.text("OpenAPI documentation not found", 404);
+      }
+      c.header("Content-Type", "text/yaml");
+      return c.body(await file.text());
+    } catch (error) {
+      return c.text("Failed to load OpenAPI spec", 500);
+    }
+  });
+}
+
 export type AppType = typeof routes;
 
 // idleTimeout must be high otherwise LLM tool calls might not complete
 export default { port: 3000, fetch: app.fetch, idleTimeout: 255 };
+

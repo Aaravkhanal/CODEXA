@@ -29,10 +29,39 @@ and release complexity.
 
 ## Scope
 
-Reports involving path traversal, unsafe file access, authentication bypass,
-credential disclosure, billing manipulation, installer integrity, dependency
-compromise, or MCP permission bypass are especially valuable. Findings against
-third-party services should be reported to the relevant provider unless CODEXA
-is the source of the vulnerability.
+Reports involving path traversal, unsafe file access, authentication bypass, credential disclosure, billing manipulation, installer integrity, dependency compromise, or MCP permission bypass are especially valuable. Findings against third-party services should be reported to the relevant provider unless CODEXA is the source of the vulnerability.
 
 Please allow a reasonable remediation period before public disclosure.
+
+---
+
+## Secret & Key Storage Guidelines
+
+### 1. Storage Location
+For the CLI tool, user API keys and configurations are saved locally on the user's filesystem inside the home directory:
+- **Location**: `~/.codexa/api-keys.json`
+- **Contents**: Raw model keys, custom MCP configurations, and local access tokens.
+
+### 2. Filesystem Permissions
+To protect against local privilege escalation or multi-user access leaks, we recommend hardening files inside the `~/.codexa/` folder. Ensure permissions are restricted to the owner only:
+
+On Unix-like platforms (macOS/Linux):
+```sh
+# Restrict read/write/execute permissions to current user only
+chmod 700 ~/.codexa
+chmod 600 ~/.codexa/api-keys.json
+```
+
+On Windows (PowerShell):
+```powershell
+# Disable inheritance and restrict ACLs to the current user
+icacls "$env:USERPROFILE\.codexa" /inheritance:r /grant:r "${env:USERNAME}:(OI)(CI)(F)"
+```
+
+### 3. Secret Rotation Guidance
+In case of suspected key compromises:
+1. Revoke the API key immediately at the provider dashboard (Anthropic, OpenAI, Clerk, Polar).
+2. Edit or delete the matching entry in `~/.codexa/api-keys.json`.
+3. If database credentials are leaked, regenerate the connection string password and update `DATABASE_URL` in your server deployment config or local `.env` file.
+4. Ensure your local configuration files are never committed to your Git repository (verify your global or local `.gitignore` prevents staging files under `~/.codexa` or `.env`).
+

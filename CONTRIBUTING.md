@@ -117,10 +117,56 @@ external imports, failed tool calls, and verification commands when relevant.
 
 ## Release Changes
 
-Distribution changes can affect all supported platforms. For release scripts,
-installer scripts, or Homebrew formula generation, review
-[docs/RELEASING.md](./docs/RELEASING.md) and verify the platform matrix where
-possible.
+Distribution changes can affect all supported platforms. For release scripts, installer scripts, or Homebrew formula generation, review [docs/RELEASING.md](./docs/RELEASING.md) and verify the platform matrix where possible.
+
+## Docker Compose Environment Setup
+
+For contributors who do not want to run PostgreSQL or Hono server directly on their host system, a pre-configured Docker Compose stack is available.
+
+1. Ensure Docker and Docker Compose are installed.
+2. Spin up the container services:
+   ```sh
+   docker compose -f docker/compose.yml up -d
+   ```
+3. This boots a local PostgreSQL database and starts the API server with hot-reloading at `http://localhost:3000`. Edit local workspace files as normal; changes will be immediately synced and loaded inside the container.
+4. View container logs using:
+   ```sh
+   docker compose -f docker/compose.yml logs -f server
+   ```
+
+## Windows-Specific Dev Notes
+
+While development is supported on Windows native environments, we strongly suggest using **WSL2 (Windows Subsystem for Linux)** with an Ubuntu distribution to match the production script runners and target builds.
+
+If developing natively on Windows:
+- Use PowerShell 7+ rather than standard Command Prompt (cmd).
+- Be mindful of path separators (`\` vs `/`). Always use standard Node/Bun `path` modules (`path.join`, `path.resolve`) to normalize separators.
+- Ensure your Git client configuration has `core.autocrlf` set to `input` or `false` to avoid formatting mismatches on shell files:
+  ```powershell
+  git config --global core.autocrlf input
+  ```
+
+## Good First Issues & Starter Areas
+
+We tag newcomer-friendly issues with the `good-first-issue` and `help-wanted` labels. If you are looking for somewhere to start:
+- **CLI improvements**: Add terminal TUI command shortcuts or improve theme styles in `packages/cli`.
+- **Typing safety**: Tighten TypeScript configurations or expand schemas in `packages/shared`.
+- **Documentation**: Expand API response formats, example configurations, or workflow guides.
+
+## Detailed Testing Guidelines
+
+Always run quality gates and test suites before pushing changes. To run specific test suites:
+
+- **All tests**: `bun test`
+- **Database schemas**: `bun run --cwd packages/database db:generate`
+- **Server endpoints**: `bun test packages/server/src/routes`
+- **CLI integration/TUI tests**: `bun test packages/cli`
+- **CodexaLens Graph & Workspace**: `bun test packages/shared/src/codexalens-workspace.test.ts`
+
+If code changes affect Prisma schemas, ensure to push the database schema changes to your local testing DB:
+```sh
+bun run db:push
+```
 
 ## Reporting Issues
 

@@ -51,3 +51,10 @@ export {
 } from "./codexalens-workspace";
 
 export const CODEXALENS_TRACE_SCHEMA_VERSION = 1 as const;
+
+export {
+  serverEnvSchema,
+  validateEnv,
+  type ServerEnv,
+} from "./env-schema";
+

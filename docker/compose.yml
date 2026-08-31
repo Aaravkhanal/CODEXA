@@ -1,0 +1,76 @@
+# =============================================================================
+# CODEXA — Docker Compose dev environment
+#
+# Usage:
+#   docker compose up -d          # start postgres + server
+#   docker compose logs -f server # follow server logs
+#   docker compose down -v        # stop and remove volumes
+#
+# The server container mounts the project source as a volume so edits are
+# reflected without rebuilding the image. Set any additional variables in a
+# .env file at the repository root.
+# =============================================================================
+
+name: codexa
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — local development database
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: codexa
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # CODEXA server — hot-reload API server
+  # ---------------------------------------------------------------------------
+  server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: dev
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount source so changes are reflected without image rebuild.
+      - ..:/app
+      # Keep node_modules from the image layer to avoid overwriting them.
+      - /app/node_modules
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/codexa
+      # Pass-through all other variables from the host .env file.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:-}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      CLERK_FRONTEND_API: ${CLERK_FRONTEND_API:-}
+      CLERK_OAUTH_CLIENT_ID: ${CLERK_OAUTH_CLIENT_ID:-}
+      CLERK_OAUTH_CLIENT_SECRET: ${CLERK_OAUTH_CLIENT_SECRET:-}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-in-production}
+      POLAR_ACCESS_TOKEN: ${POLAR_ACCESS_TOKEN:-}
+      POLAR_PRODUCT_ID: ${POLAR_PRODUCT_ID:-}
+      POLAR_CREDITS_METER_ID: ${POLAR_CREDITS_METER_ID:-}
+      POLAR_SERVER: ${POLAR_SERVER:-sandbox}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
+
+volumes:
+  postgres_data:
