@@ -6,12 +6,16 @@ import {
   ModelsDialogContent,
   McpDialogContent,
   CodexaLensDialogContent,
+  GitDialogContent,
 } from "../dialogs";
 import { AddApiKeyDialogContent } from "../dialogs/add-api-key-dialog";
 import { SUPPORTED_CHAT_MODELS } from "@codexa/shared";
 import { performLogin } from "../../lib/oauth";
 import { clearAuth } from "../../lib/auth";
 import { openBillingPortal, openUpgradeCheckout } from "../../lib/upgrade";
+import { detectProject } from "../../lib/project-detector";
+import { undoLastSnapshotSet } from "../../lib/snapshot-manager";
+import { apiClient } from "../../lib/api-client";
 
 export const COMMANDS: Command[] = [
   {
@@ -168,6 +172,142 @@ export const COMMANDS: Command[] = [
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to open billing portal";
         ctx.toast.show({ variant: "error", message });
+      }
+    },
+  },
+  {
+    name: "git",
+    description: "Open Git status dialog",
+    value: "/git",
+    action: (ctx) => {
+      ctx.dialog.open({
+        title: "Git Status",
+        children: <GitDialogContent initialTab="status" />,
+      });
+    },
+  },
+  {
+    name: "diff",
+    description: "Show current Git changes diff",
+    value: "/diff",
+    action: (ctx) => {
+      ctx.dialog.open({
+        title: "Git Diff",
+        size: "fullscreen",
+        children: <GitDialogContent initialTab="diff" />,
+      });
+    },
+  },
+  {
+    name: "status",
+    description: "Show current project info status",
+    value: "/status",
+    action: (ctx) => {
+      const info = detectProject();
+      ctx.toast.show({
+        message: `Project: ${info.name} | PM: ${info.packageManager} | Git: ${info.gitStatus}`,
+      });
+    },
+  },
+  {
+    name: "undo",
+    description: "Undo the last changes made by Codexa",
+    value: "/undo",
+    action: (ctx) => {
+      if (!ctx.sessionId) {
+        ctx.toast.show({ variant: "error", message: "No active session for undo" });
+        return;
+      }
+      const reverted = undoLastSnapshotSet(ctx.sessionId);
+      if (reverted.length > 0) {
+        ctx.toast.show({
+          variant: "success",
+          message: `Reverted changes in: ${reverted.join(", ")}`,
+        });
+      } else {
+        ctx.toast.show({ message: "No changes to revert" });
+      }
+    },
+  },
+  {
+    name: "plan",
+    description: "Switch to PLAN mode",
+    value: "/plan",
+    action: (ctx) => {
+      ctx.setMode("PLAN");
+      ctx.toast.show({ message: "Switched to PLAN mode" });
+    },
+  },
+  {
+    name: "build",
+    description: "Switch to BUILD mode",
+    value: "/build",
+    action: (ctx) => {
+      ctx.setMode("BUILD");
+      ctx.toast.show({ message: "Switched to BUILD mode" });
+    },
+  },
+  {
+    name: "test",
+    description: "Submit testing request to the agent",
+    value: "/test",
+    action: (ctx) => {
+      if (ctx.submit) {
+        ctx.submit("run the tests and fix whatever fails");
+      }
+    },
+  },
+  {
+    name: "lint",
+    description: "Submit linting request to the agent",
+    value: "/lint",
+    action: (ctx) => {
+      if (ctx.submit) {
+        ctx.submit("run the linter and fix all issues");
+      }
+    },
+  },
+  {
+    name: "review",
+    description: "Submit code review request for your changes",
+    value: "/review",
+    action: (ctx) => {
+      if (ctx.submit) {
+        ctx.submit("review my current git diff and identify issues");
+      }
+    },
+  },
+  {
+    name: "scan",
+    description: "Submit security and bug scan request",
+    value: "/scan",
+    action: (ctx) => {
+      if (ctx.submit) {
+        ctx.submit("scan for security issues and potential bugs");
+      }
+    },
+  },
+  {
+    name: "clear",
+    description: "Clear history messages of this session",
+    value: "/clear",
+    action: async (ctx) => {
+      if (!ctx.sessionId) {
+        ctx.toast.show({ variant: "error", message: "No active session to clear" });
+        return;
+      }
+      try {
+        const res = await apiClient.sessions[":id"].clear.$post({
+          param: { id: ctx.sessionId }
+        });
+        if (res.ok) {
+          ctx.toast.show({ variant: "success", message: "Conversation history cleared" });
+          ctx.navigate("/");
+        } else {
+          ctx.toast.show({ variant: "error", message: "Failed to clear session" });
+        }
+      } catch (err) {
+        ctx.toast.show({ variant: "error", message: "Failed to clear session" });
       }
     },
   },

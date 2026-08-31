@@ -10,6 +10,9 @@ export type CommandContext = {
   mode: ModeType;
   setMode: (mode: ModeType) => void;
   setModel: (model: SupportedChatModelId) => void;
+  setText?: (text: string) => void;
+  submit?: (text: string) => void;
+  sessionId?: string;
 };
 
 export type Command = {

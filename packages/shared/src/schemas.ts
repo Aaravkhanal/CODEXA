@@ -40,6 +40,23 @@ export const toolInputSchemas = {
     description: z.string().optional().describe("Short description of the command"),
     timeout: z.number().optional().describe("Timeout in milliseconds"),
   }),
+  deleteFile: z.object({
+    path: z.string().describe("Relative path to the file to delete"),
+  }),
+  moveFile: z.object({
+    from: z.string().describe("Relative path of the file to move/rename"),
+    to: z.string().describe("Relative target path"),
+  }),
+  gitStatus: z.object({}),
+  gitDiff: z.object({
+    staged: z.boolean().optional().describe("Show staged diff if true, unstaged diff if false or omitted"),
+  }),
+  gitLog: z.object({
+    limit: z.number().optional().default(20).describe("Limit log output entries"),
+  }),
+  gitCommit: z.object({
+    message: z.string().describe("Commit message"),
+  }),
 };
 
 const readOnlyToolContracts = {
@@ -59,6 +76,18 @@ const readOnlyToolContracts = {
     description: "Search project files for a regular expression",
     inputSchema: toolInputSchemas.grep,
   }),
+  gitStatus: tool({
+    description: "Run git status and show untracked, modified, and staged changes",
+    inputSchema: toolInputSchemas.gitStatus,
+  }),
+  gitDiff: tool({
+    description: "Run git diff to view changes made to workspace files",
+    inputSchema: toolInputSchemas.gitDiff,
+  }),
+  gitLog: tool({
+    description: "Run git log to view recent commits history",
+    inputSchema: toolInputSchemas.gitLog,
+  }),
 };
 
 const buildToolContracts = {
@@ -74,6 +103,18 @@ const buildToolContracts = {
   bash: tool({
     description: "Run a shell command in the project directory",
     inputSchema: toolInputSchemas.bash,
+  }),
+  deleteFile: tool({
+    description: "Delete a file in the project",
+    inputSchema: toolInputSchemas.deleteFile,
+  }),
+  moveFile: tool({
+    description: "Rename or move a file in the project",
+    inputSchema: toolInputSchemas.moveFile,
+  }),
+  gitCommit: tool({
+    description: "Add changes and commit them with a message",
+    inputSchema: toolInputSchemas.gitCommit,
   }),
 };
 

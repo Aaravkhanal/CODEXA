@@ -1,5 +1,7 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createGoogle } from "@ai-sdk/google";
+import { createGroq } from "@ai-sdk/groq";
 import {
   findSupportedChatModel,
   type SupportedChatModel,
@@ -11,10 +13,14 @@ import type { ProviderOptions } from "@ai-sdk/provider-utils";
 
 type AnthropicModelId = Extract<SupportedChatModel, { provider: "anthropic" }>["id"];
 type OpenAIModelId = Extract<SupportedChatModel, { provider: "openai" }>["id"];
+type GoogleModelId = Extract<SupportedChatModel, { provider: "google" }>["id"];
+type GroqModelId = Extract<SupportedChatModel, { provider: "groq" }>["id"];
 
 export type ClientApiKeys = {
   anthropic?: string;
   openai?: string;
+  google?: string;
+  groq?: string;
 };
 
 export type ResolvedModel = {
@@ -88,6 +94,33 @@ function resolveOpenAIModel(modelId: OpenAIModelId, apiKey?: string): ResolvedMo
   };
 }
 
+function resolveGoogleModel(modelId: GoogleModelId, apiKey?: string): ResolvedModel {
+  const google = createGoogle({
+    apiKey: apiKey ?? process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY,
+  });
+  let sdkModelId: string = modelId;
+  if (modelId === "gemini-2.5-pro") sdkModelId = "gemini-2.5-pro";
+  else if (modelId === "gemini-2.5-flash") sdkModelId = "gemini-2.5-flash";
+  return {
+    model: google(sdkModelId),
+    provider: "google",
+    modelId,
+  };
+}
+
+function resolveGroqModel(modelId: GroqModelId, apiKey?: string): ResolvedModel {
+  const provider = createGroq({
+    apiKey: apiKey ?? process.env.GROQ_API_KEY,
+  });
+  let sdkModelId: string = modelId;
+  if (modelId === "llama-3.3-70b-versatile") sdkModelId = "llama-3.3-70b-versatile";
+  return {
+    model: provider(sdkModelId),
+    provider: "groq",
+    modelId,
+  };
+}
+
 function resolveSupportedChatModel(model: SupportedChatModel, clientKeys: ClientApiKeys): ResolvedModel {
   const provider = model.provider;
   switch (provider) {
@@ -95,6 +128,10 @@ function resolveSupportedChatModel(model: SupportedChatModel, clientKeys: Client
       return resolveAnthropicModel(model.id, clientKeys.anthropic);
     case "openai":
       return resolveOpenAIModel(model.id, clientKeys.openai);
+    case "google":
+      return resolveGoogleModel(model.id as GoogleModelId, clientKeys.google);
+    case "groq":
+      return resolveGroqModel(model.id as GroqModelId, clientKeys.groq);
     default:
       return assertUnsupportedProvider(provider);
   }

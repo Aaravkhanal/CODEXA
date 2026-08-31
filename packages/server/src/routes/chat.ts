@@ -34,7 +34,7 @@ const app = new Hono<AuthenticatedEnv>()
     submitValidator,
     async (c) => {
       const userId = c.get("userId");
-      const { id, messages, mode, model } = c.req.valid("json");
+      const { id, messages, mode, model, projectContext } = c.req.valid("json");
 
       const session = await db.session.findUnique({
         where: {
@@ -53,6 +53,8 @@ const app = new Hono<AuthenticatedEnv>()
       const clientKeys = {
         anthropic: c.req.header("X-Anthropic-Key") ?? undefined,
         openai: c.req.header("X-OpenAI-Key") ?? undefined,
+        google: c.req.header("X-Google-Key") ?? undefined,
+        groq: c.req.header("X-Groq-Key") ?? undefined,
       };
 
       const resolvedModel = resolveChatModel(model, clientKeys);
@@ -87,7 +89,7 @@ const app = new Hono<AuthenticatedEnv>()
 
       const result = streamText({
         model: resolvedModel.model,
-        system: buildSystemPrompt({ mode }),
+        system: buildSystemPrompt({ mode, projectContext }),
         messages: modelMessages,
         tools,
         providerOptions: resolvedModel.providerOptions,

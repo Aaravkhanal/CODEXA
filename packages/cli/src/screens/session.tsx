@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useParams, useLocation, useNavigate } from "react-router";
 import { z } from "zod";
 import { useKeyboard } from "@opentui/react";
@@ -21,6 +21,7 @@ import { useKeyboardLayer } from "../providers/keyboard-layer";
 import { useDialog } from "../providers/dialog";
 import { CodexaLensDialogContent } from "../components/dialogs/codexalens-dialog";
 import { AddApiKeyDialogContent } from "../components/dialogs/add-api-key-dialog";
+import { ConfirmToolDialogContent } from "../components/dialogs";
 
 type SessionData = InferResponseType<(typeof apiClient.sessions)[":id"]["$get"], 200>;
 
@@ -52,13 +53,16 @@ function ChatMessage(
   }
 
   return (
-    <BotMessage
-      parts={msg.parts}
-      model={msg.metadata?.model ?? "unknown"}
-      mode={msg.metadata?.mode ?? "BUILD"}
-      durationMs={msg.metadata?.durationMs}
-      streaming={false}
-    />
+    <box>
+      <BotMessage
+        parts={msg.parts}
+        model={msg.metadata?.model ?? "unknown"}
+        mode={msg.metadata?.mode ?? "BUILD"}
+        durationMs={msg.metadata?.durationMs}
+        streaming={false}
+        usage={msg.metadata?.usage}
+      />
+    </box>
   );
 }
 
@@ -73,7 +77,25 @@ function SessionChat({
   const { model, mode } = usePromptConfig();
   const { isTopLayer } = useKeyboardLayer();
   const dialog = useDialog();
-  const { messages, status, submit, abort, interrupt, error } = useChat(session.id, initialMessages);
+
+  const askConfirmation = useCallback((toolName: string, details: string) => {
+    return new Promise<boolean>((resolve) => {
+      dialog.open({
+        title: "Confirm Tool Execution",
+        children: (
+          <ConfirmToolDialogContent
+            toolName={toolName}
+            details={details}
+            onConfirm={(allowed) => {
+              resolve(allowed);
+            }}
+          />
+        ),
+      });
+    });
+  }, [dialog]);
+
+  const { messages, status, submit, abort, interrupt, error } = useChat(session.id, initialMessages, { askConfirmation });
   const hasSubmittedInitialPromptRef = useRef(false);
 
   // Stop the pending reply when the user leaves this session.

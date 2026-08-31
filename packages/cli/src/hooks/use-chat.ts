@@ -14,11 +14,16 @@ import {
     type SupportedChatModelId,
     type ToolContracts,
 } from "@codexa/shared";
+import { resolve } from "node:path";
 import { getAllApiKeys } from "../lib/api-keys";
 import { apiClient } from "../lib/api-client";
 import { getAuth } from "../lib/auth";
 import { executeLocalTool } from "../lib/local-tools";
 import { useCodexaLens } from "../providers/codexalens";
+import { detectProject } from "../lib/project-detector";
+import { getProjectRules } from "../lib/project-rules";
+import { getPermissionLevel } from "../lib/permission-manager";
+import { saveFileSnapshot } from "../lib/snapshot-manager";
 
 function activityEvent(
     toolCallId: string,
@@ -71,7 +76,11 @@ type ChatTools = {
 
 export type Message = UIMessage<ChatMessageMetadata, never, ChatTools>;
 
-export function useChat(sessionId: string, initialMessages: Message[]) {
+export function useChat(
+    sessionId: string,
+    initialMessages: Message[],
+    options?: { askConfirmation?: (toolName: string, details: string) => Promise<boolean> }
+) {
     const { recordActivity } = useCodexaLens();
     const sessionStartedAt = useRef(Date.now());
     const toolStartedAt = useRef(new Map<string, number>());
@@ -91,6 +100,12 @@ export function useChat(sessionId: string, initialMessages: Message[]) {
                 if (storedKeys.openai) {
                     headers.set("X-OpenAI-Key", storedKeys.openai);
                 }
+                if (storedKeys.google) {
+                    headers.set("X-Google-Key", storedKeys.google);
+                }
+                if (storedKeys.groq) {
+                    headers.set("X-Groq-Key", storedKeys.groq);
+                }
                 return headers;
             },
             prepareSendMessagesRequest({ messages }) {
@@ -101,12 +116,20 @@ export function useChat(sessionId: string, initialMessages: Message[]) {
                     (m) => m.metadata?.mode && m.metadata?.model
                 )?.metadata;
 
+                const rules = getProjectRules();
+                const projInfo = detectProject();
+                const projectContext = {
+                    ...projInfo,
+                    projectRules: rules,
+                };
+
                 return {
                     body: {
                         id: sessionId,
                         messages,
                         mode: message.metadata?.mode || metadata?.mode,
                         model: message.metadata?.model || metadata?.model,
+                        projectContext,
                     },
                 };
             }
@@ -119,36 +142,71 @@ export function useChat(sessionId: string, initialMessages: Message[]) {
         transport,
         onToolCall({ toolCall }) {
             const mode = chat.messages.at(-1)?.metadata?.mode ?? "BUILD";
-            const startedAt = Date.now();
-            toolStartedAt.current.set(toolCall.toolCallId, startedAt);
-            recordActivity(sessionId, activityEvent(
-                toolCall.toolCallId,
-                toolCall.toolName,
-                toolCall.input,
-                "started",
-                false,
-                sessionStartedAt.current,
-            ));
+            const permission = getPermissionLevel(toolCall.toolName, toolCall.input);
+            
+            const formatToolArgsString = (tc: any): string => {
+                if (!tc.input) return "";
+                if (typeof tc.input !== "object") return String(tc.input);
+                return Object.entries(tc.input).map(([k, v]) => `${k}: ${v}`).join(", ");
+            };
 
-            void executeLocalTool(toolCall.toolName, toolCall.input, mode)
-                .then((output) => {
-                    recordActivity(sessionId, activityEvent(
-                        toolCall.toolCallId,
-                        toolCall.toolName,
-                        toolCall.input,
-                        "completed",
-                        false,
-                        sessionStartedAt.current,
-                        toolStartedAt.current.get(toolCall.toolCallId),
-                    ));
-                    toolStartedAt.current.delete(toolCall.toolCallId);
-                    return chat.addToolOutput({
-                        tool: toolCall.toolName as keyof ChatTools,
-                        toolCallId: toolCall.toolCallId,
-                        output,
-                    });
-                })
-                .catch((error) => {
+            const proceedPromise = permission === "dangerous" && options?.askConfirmation
+                ? options.askConfirmation(toolCall.toolName, formatToolArgsString(toolCall))
+                : Promise.resolve(true);
+
+            proceedPromise.then((allowed) => {
+                if (!allowed) {
+                    throw new Error("Tool execution cancelled by user");
+                }
+
+                // Snapshots before modifying files
+                if (["writeFile", "editFile", "deleteFile", "moveFile"].includes(toolCall.toolName)) {
+                    const inputObj = toolCall.input as any;
+                    const filePathsToSnapshot = [];
+                    if (inputObj.path) filePathsToSnapshot.push(inputObj.path);
+                    if (inputObj.from) filePathsToSnapshot.push(inputObj.from);
+
+                    for (const relativePath of filePathsToSnapshot) {
+                        try {
+                            const absolutePath = resolve(process.cwd(), relativePath);
+                            saveFileSnapshot(sessionId, relativePath, absolutePath);
+                        } catch {
+                            // ignore snapshot failures
+                        }
+                    }
+                }
+
+                const startedAt = Date.now();
+                toolStartedAt.current.set(toolCall.toolCallId, startedAt);
+                recordActivity(sessionId, activityEvent(
+                    toolCall.toolCallId,
+                    toolCall.toolName,
+                    toolCall.input,
+                    "started",
+                    false,
+                    sessionStartedAt.current,
+                ));
+
+                return executeLocalTool(toolCall.toolName, toolCall.input, mode);
+            })
+            .then((output) => {
+                recordActivity(sessionId, activityEvent(
+                    toolCall.toolCallId,
+                    toolCall.toolName,
+                    toolCall.input,
+                    "completed",
+                    false,
+                    sessionStartedAt.current,
+                    toolStartedAt.current.get(toolCall.toolCallId),
+                ));
+                toolStartedAt.current.delete(toolCall.toolCallId);
+                return chat.addToolOutput({
+                    tool: toolCall.toolName as keyof ChatTools,
+                    toolCallId: toolCall.toolCallId,
+                    output,
+                });
+            })
+            .catch((error) => {
                 recordActivity(sessionId, activityEvent(
                     toolCall.toolCallId,
                     toolCall.toolName,

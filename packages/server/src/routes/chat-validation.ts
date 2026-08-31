@@ -41,6 +41,16 @@ export const submitSchema = z.object({
     .min(1),
   mode: modeSchema,
   model: z.string().refine(isSupportedChatModel, "Unsupported model"),
+  projectContext: z.object({
+    name: z.string().optional(),
+    path: z.string().optional(),
+    frameworks: z.array(z.string()).optional(),
+    packageManager: z.string().optional(),
+    languages: z.array(z.string()).optional(),
+    testFramework: z.string().optional(),
+    projectRules: z.string().optional(),
+    fileCount: z.number().optional(),
+  }).optional(),
 });
 
 export function hasPendingToolCalls(message: CodexaUIMessage) {

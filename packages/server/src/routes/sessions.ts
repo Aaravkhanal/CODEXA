@@ -103,6 +103,17 @@ const app = new Hono<AuthenticatedEnv>()
     })
 
     return c.json(session, 201);
+  })
+  .post("/:id/clear", async (c) => {
+    const id = c.req.param("id");
+    const userId = c.get("userId");
+
+    const session = await db.session.update({
+      where: { id, userId },
+      data: { messages: [] },
+    });
+
+    return c.json(session);
   });
 
 export default app;

@@ -9,6 +9,8 @@ import { usePromptConfig } from "../../providers/prompt-config";
 const PROVIDERS: { id: SupportedProvider; label: string; placeholder: string }[] = [
   { id: "anthropic", label: "Anthropic  (claude-*)", placeholder: "sk-ant-api..." },
   { id: "openai", label: "OpenAI     (gpt-*)", placeholder: "sk-proj-..." },
+  { id: "google", label: "Google     (gemini-*)", placeholder: "AIza..." },
+  { id: "groq", label: "Groq       (llama-*)", placeholder: "gsk_..." },
 ];
 
 export type AddApiKeyDialogContentProps = {

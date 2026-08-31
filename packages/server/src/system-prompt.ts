@@ -1,16 +1,48 @@
 import type { ModeType } from "@codexa/shared";
 
-type SystemPromptParams = {
-  mode: ModeType;
+export type ProjectContext = {
+  name?: string;
+  path?: string;
+  frameworks?: string[];
+  packageManager?: string;
+  languages?: string[];
+  testFramework?: string;
+  projectRules?: string;
+  fileCount?: number;
 };
 
-export function buildSystemPrompt({ mode }: SystemPromptParams): string {
+type SystemPromptParams = {
+  mode: ModeType;
+  projectContext?: ProjectContext;
+};
+
+export function buildSystemPrompt({ mode, projectContext }: SystemPromptParams): string {
   const parts: string[] = [];
 
   parts.push(`You are an expert software engineer working as a coding assistant inside a terminal application.
 The application has two modes the user can switch between:
 - **PLAN** - Read-only analysis and planning. No file modifications.
 - **BUILD** - Full implementation with read and write tools.`);
+
+  if (projectContext) {
+    const stack = [
+      ...(projectContext.frameworks || []),
+      ...(projectContext.languages || []),
+    ].join(", ");
+
+    parts.push(`## Project Context
+Project: ${projectContext.name || "unknown"}
+Path: ${projectContext.path || "unknown"}
+Stack: ${stack || "not detected"}
+Package Manager: ${projectContext.packageManager || "npm"}
+Test Framework: ${projectContext.testFramework || "none"}
+File Count: ${projectContext.fileCount || 0} (approximate)`);
+
+    if (projectContext.projectRules) {
+      parts.push(`## Project Rules
+${projectContext.projectRules}`);
+    }
+  }
 
   if (mode === "PLAN") {
     parts.push(`## Mode: PLAN

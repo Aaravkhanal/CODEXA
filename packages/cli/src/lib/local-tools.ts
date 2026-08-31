@@ -1,6 +1,8 @@
-import { mkdir, readFile, readdir, stat, writeFile } from "fs/promises";
+import { mkdir, readFile, readdir, stat, writeFile, unlink, rename } from "fs/promises";
+import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "path";
 import { toolInputSchemas, Mode, type ModeType } from "@codexa/shared";
+import { execSync } from "node:child_process";
 
 const MAX_FILE_SIZE = 10_000;
 const MAX_RESULTS = 200;
@@ -55,7 +57,7 @@ export async function executeLocalTool(
 ) {
   if (
     mode === Mode.PLAN &&
-    !["readFile", "listDirectory", "glob", "grep"].includes(toolName)
+    !["readFile", "listDirectory", "glob", "grep", "gitStatus", "gitDiff", "gitLog"].includes(toolName)
   ) {
     throw new Error(`Tool ${toolName} is not available in PLAN mode`);
   }
@@ -262,6 +264,97 @@ export async function executeLocalTool(
         stderr: truncate(stderr, MAX_OUTPUT),
         exitCode,
       };
+    }
+
+    case "deleteFile": {
+      const { path } = toolInputSchemas.deleteFile.parse(input);
+      const { cwd, resolved } = resolveInsideCwd(path);
+      if (!existsSync(resolved)) {
+        throw new Error(`File not found: ${path}`);
+      }
+      await unlink(resolved);
+      return {
+        success: true as const,
+        path: relative(cwd, resolved).replaceAll("\\", "/"),
+      };
+    }
+
+    case "moveFile": {
+      const { from, to } = toolInputSchemas.moveFile.parse(input);
+      const { cwd, resolved: resolvedFrom } = resolveInsideCwd(from);
+      const { resolved: resolvedTo } = resolveInsideCwd(to);
+      if (!existsSync(resolvedFrom)) {
+        throw new Error(`Source file not found: ${from}`);
+      }
+      await mkdir(dirname(resolvedTo), { recursive: true });
+      await rename(resolvedFrom, resolvedTo);
+      return {
+        success: true as const,
+        from: relative(cwd, resolvedFrom).replaceAll("\\", "/"),
+        to: relative(cwd, resolvedTo).replaceAll("\\", "/"),
+      };
+    }
+
+    case "gitStatus": {
+      const { resolved } = resolveInsideCwd(".");
+      const gitDir = join(resolved, ".git");
+      if (!existsSync(gitDir)) {
+        return { isGit: false, status: "Not a Git repository" };
+      }
+      try {
+        const stdout = execSync("git status --porcelain", { cwd: resolved, encoding: "utf-8" });
+        return { isGit: true, status: stdout };
+      } catch (err: any) {
+        return { isGit: true, error: err.message };
+      }
+    }
+
+    case "gitDiff": {
+      const { staged } = toolInputSchemas.gitDiff.parse(input);
+      const { resolved } = resolveInsideCwd(".");
+      const gitDir = join(resolved, ".git");
+      if (!existsSync(gitDir)) {
+        return { isGit: false, diff: "Not a Git repository" };
+      }
+      try {
+        const cmd = staged ? "git diff --staged" : "git diff";
+        const stdout = execSync(cmd, { cwd: resolved, encoding: "utf-8" });
+        return { isGit: true, diff: stdout };
+      } catch (err: any) {
+        return { isGit: true, error: err.message };
+      }
+    }
+
+    case "gitLog": {
+      const { limit = 20 } = toolInputSchemas.gitLog.parse(input);
+      const { resolved } = resolveInsideCwd(".");
+      const gitDir = join(resolved, ".git");
+      if (!existsSync(gitDir)) {
+        return { isGit: false, log: "Not a Git repository" };
+      }
+      try {
+        const stdout = execSync(`git log --oneline -n ${limit}`, { cwd: resolved, encoding: "utf-8" });
+        return { isGit: true, log: stdout };
+      } catch (err: any) {
+        return { isGit: true, error: err.message };
+      }
+    }
+
+    case "gitCommit": {
+      const { message } = toolInputSchemas.gitCommit.parse(input);
+      const { resolved } = resolveInsideCwd(".");
+      const gitDir = join(resolved, ".git");
+      if (!existsSync(gitDir)) {
+        throw new Error("Not a Git repository");
+      }
+      try {
+        execSync("git add -A", { cwd: resolved });
+        const safeMessage = message.replace(/"/g, '\\"');
+        const stdout = execSync(`git commit -m "${safeMessage}"`, { cwd: resolved, encoding: "utf-8" });
+        return { success: true, commit: stdout };
+      } catch (err: any) {
+        throw new Error(`Git commit failed: ${err.message}`);
+      }
     }
 
     default:

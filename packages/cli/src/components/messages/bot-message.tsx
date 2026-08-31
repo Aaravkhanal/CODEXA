@@ -1,9 +1,11 @@
 import prettyMs from "pretty-ms";
 import { EmptyBorder } from "../border";
 import { TextAttributes } from "@opentui/core";
-import { Mode, type ModeType } from "@codexa/shared";
+import { Mode, type ModeType, findSupportedChatModel } from "@codexa/shared";
+import type { LanguageModelUsage } from "ai";
 import type { Message } from "../../hooks/use-chat";
 import { useTheme } from "../../providers/theme";
+import { useMemo } from "react";
 
 type ClientMessagePart = Message["parts"][number];
 type ToolPart = Extract<ClientMessagePart, { type: `tool-${string}` | "dynamic-tool"}>;
@@ -14,6 +16,7 @@ type Props = {
   mode: ModeType;
   durationMs?: number;
   streaming?: boolean; 
+  usage?: LanguageModelUsage;
 };
 
 function formatToolName(name: string): string {
@@ -63,8 +66,18 @@ export function BotMessage({
   mode,
   durationMs,
   streaming = false,
+  usage,
 }: Props) {
   const { colors } = useTheme();
+
+  const cost = useMemo(() => {
+    if (!usage) return null;
+    const modelDef = findSupportedChatModel(model);
+    if (!modelDef) return null;
+    const inputCost = ((usage.inputTokens ?? 0) * modelDef.pricing.inputUsdPerMillionTokens) / 1_000_000;
+    const outputCost = ((usage.outputTokens ?? 0) * modelDef.pricing.outputUsdPerMillionTokens) / 1_000_000;
+    return inputCost + outputCost;
+  }, [usage, model]);
 
   return (
     <box width="100%" alignItems="center">
@@ -146,6 +159,26 @@ export function BotMessage({
               |
             </text>
             <text attributes={TextAttributes.DIM}>{model}</text>
+            {usage && (
+              <>
+                <text attributes={TextAttributes.DIM} fg={colors.dimSeparator}>
+                  |
+                </text>
+                <text attributes={TextAttributes.DIM}>
+                  {(usage.totalTokens ?? ((usage.inputTokens ?? 0) + (usage.outputTokens ?? 0))).toLocaleString()} tokens
+                </text>
+              </>
+            )}
+            {cost != null && (
+              <>
+                <text attributes={TextAttributes.DIM} fg={colors.dimSeparator}>
+                  |
+                </text>
+                <text attributes={TextAttributes.DIM}>
+                  ~${cost.toFixed(4)}
+                </text>
+              </>
+            )}
             {(durationMs != null) && (
               <>
                 <text attributes={TextAttributes.DIM} fg={colors.dimSeparator}>
