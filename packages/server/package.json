@@ -21,7 +21,7 @@
     "@clerk/backend": "^3.16.1",
     "@codexa/database": "workspace:*",
     "@codexa/shared": "workspace:*",
-    "@hono/zod-validator": "^0.8.0",
+    "@hono/zod-validator": "^0.9.0",
     "@polar-sh/sdk": "^0.49.0",
     "@sentry/bun": "^10.65.0",
     "@sentry/hono": "^10.65.0",
