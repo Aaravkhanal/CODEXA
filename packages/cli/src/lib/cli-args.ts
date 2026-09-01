@@ -10,6 +10,7 @@ export type CliMode =
   | "plan"
   | "scan"
   | "commit"
+  | "lens-export"
   | "task";
 
 export interface ParsedArgs {
@@ -19,6 +20,7 @@ export interface ParsedArgs {
   autoApprove: boolean;
   model?: string;
   executionMode?: "PLAN" | "BUILD";
+  exportOutputPath?: string;
 }
 
 export function parseCliArgs(argv: string[] = args): ParsedArgs {
@@ -60,12 +62,22 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
   }
 
   const first = filteredArgs[0]!;
+  const second = filteredArgs[1];
 
   if (first === "setup") return { mode: "setup", autoApprove, model, executionMode };
   if (first === "doctor") return { mode: "doctor", autoApprove, model, executionMode };
   if (first === "review") return { mode: "review", autoApprove, model, executionMode };
   if (first === "scan") return { mode: "scan", autoApprove, model, executionMode };
   if (first === "commit") return { mode: "commit", autoApprove, model, executionMode };
+  if (first === "lens" && second === "export") {
+    return {
+      mode: "lens-export",
+      exportOutputPath: filteredArgs[2] || "codexa-timeline-export.html",
+      autoApprove,
+      model,
+      executionMode,
+    };
+  }
   if (first === "explain") {
     return { mode: "explain", targetFile: filteredArgs[1], autoApprove, model, executionMode };
   }

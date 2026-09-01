@@ -58,3 +58,9 @@ export {
   type ServerEnv,
 } from "./env-schema";
 
+export {
+  LocalSemanticIndex,
+  type IndexDocument,
+  type SemanticSearchResult,
+} from "./local-semantic-index";
+

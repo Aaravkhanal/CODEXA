@@ -333,7 +333,7 @@ export function CodexaLensDialogContent({ sessionId: explicitSessionId }: { sess
           F3 Timeline
         </text>
         <box flexGrow={1} />
-        <text attributes={TextAttributes.DIM}>trace v{snapshot.traceSchemaVersion} · local source boundary</text>
+        <text attributes={TextAttributes.DIM}>🔒 100% Local-Only Search · trace v{snapshot.traceSchemaVersion}</text>
       </box>
 
       {view === "workspace" ? (

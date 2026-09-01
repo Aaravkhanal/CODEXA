@@ -4,6 +4,7 @@ declare const CODEXA_OPENTUI_LIBC: string | undefined;
 import { cliArgs } from "./lib/cli-args";
 import { detectProject } from "./lib/project-detector";
 import { printDoctorReport } from "./lib/doctor";
+import { exportSessionTimeline } from "./lib/lens-export";
 import { execSync } from "node:child_process";
 
 const version = typeof CODEXA_VERSION === "string" ? CODEXA_VERSION : "dev";
@@ -16,14 +17,15 @@ if (args.includes("--version") || args.includes("-v")) {
 
 Usage:
   codexa [options]
-  codexa doctor           Run diagnostic checks on environment, keys, and MCP config
-  codexa commit           Analyze git status/diff and generate commit
-  codexa setup            Interactive auth & API keys setup
-  codexa review           Review uncommitted git changes for potential bugs
-  codexa scan             Scan project structure and index CodexaLens graph
-  codexa explain <file>   Explain source code file structure
-  codexa plan "<prompt>"  Create step-by-step implementation plan (PLAN mode)
-  codexa "<prompt>"       Execute task prompt directly in terminal
+  codexa doctor               Run diagnostic checks on environment, keys, and MCP config
+  codexa lens export [path]   Export completed session Timeline to standalone HTML report
+  codexa commit               Analyze git status/diff and generate commit
+  codexa setup                Interactive auth & API keys setup
+  codexa review               Review uncommitted git changes for potential bugs
+  codexa scan                 Scan project structure and index CodexaLens graph
+  codexa explain <file>       Explain source code file structure
+  codexa plan "<prompt>"      Create step-by-step implementation plan (PLAN mode)
+  codexa "<prompt>"           Execute task prompt directly in terminal
 
 Options:
   -h, --help               Show this help message
@@ -39,6 +41,12 @@ Environment:
   ANTHROPIC_API_KEY        Anthropic API key for direct local LLM execution
   OPENAI_API_KEY           OpenAI API key for direct local LLM execution
   GOOGLE_API_KEY           Google Gemini API key for direct local LLM execution`);
+} else if (cliArgs.mode === "lens-export") {
+  const outputPath = cliArgs.exportOutputPath || "codexa-timeline-export.html";
+  console.log(`Exporting CodexaLens session timeline report...`);
+  const path = await exportSessionTimeline("latest-session", outputPath, []);
+  console.log(`✓ HTML Session Report exported successfully to: ${path}`);
+  process.exit(0);
 } else if (cliArgs.mode === "doctor") {
   const success = await printDoctorReport();
   process.exit(success ? 0 : 1);
