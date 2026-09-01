@@ -18,6 +18,7 @@ export interface ParsedArgs {
   targetFile?: string;
   taskPrompt?: string;
   autoApprove: boolean;
+  sandbox: boolean;
   model?: string;
   executionMode?: "PLAN" | "BUILD";
   exportOutputPath?: string;
@@ -25,6 +26,7 @@ export interface ParsedArgs {
 
 export function parseCliArgs(argv: string[] = args): ParsedArgs {
   let autoApprove = false;
+  let sandbox = false;
   let model: string | undefined;
   let executionMode: "PLAN" | "BUILD" | undefined;
   let isStatus = false;
@@ -35,6 +37,8 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
     const arg = argv[i]!;
     if (arg === "-y" || arg === "--yes" || arg === "--auto-approve" || arg === "--dangerously-skip-permissions") {
       autoApprove = true;
+    } else if (arg === "--sandbox") {
+      sandbox = true;
     } else if (arg === "--status") {
       isStatus = true;
     } else if (arg === "--doctor" || arg === "doctor") {
@@ -50,43 +54,44 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
   }
 
   if (isDoctor) {
-    return { mode: "doctor", autoApprove, model, executionMode };
+    return { mode: "doctor", autoApprove, sandbox, model, executionMode };
   }
 
   if (isStatus) {
-    return { mode: "status", autoApprove, model, executionMode };
+    return { mode: "status", autoApprove, sandbox, model, executionMode };
   }
 
   if (filteredArgs.length === 0) {
-    return { mode: "interactive", autoApprove, model, executionMode };
+    return { mode: "interactive", autoApprove, sandbox, model, executionMode };
   }
 
   const first = filteredArgs[0]!;
   const second = filteredArgs[1];
 
-  if (first === "setup") return { mode: "setup", autoApprove, model, executionMode };
-  if (first === "doctor") return { mode: "doctor", autoApprove, model, executionMode };
-  if (first === "review") return { mode: "review", autoApprove, model, executionMode };
-  if (first === "scan") return { mode: "scan", autoApprove, model, executionMode };
-  if (first === "commit") return { mode: "commit", autoApprove, model, executionMode };
+  if (first === "setup") return { mode: "setup", autoApprove, sandbox, model, executionMode };
+  if (first === "doctor") return { mode: "doctor", autoApprove, sandbox, model, executionMode };
+  if (first === "review") return { mode: "review", autoApprove, sandbox, model, executionMode };
+  if (first === "scan") return { mode: "scan", autoApprove, sandbox, model, executionMode };
+  if (first === "commit") return { mode: "commit", autoApprove, sandbox, model, executionMode };
   if (first === "lens" && second === "export") {
     return {
       mode: "lens-export",
       exportOutputPath: filteredArgs[2] || "codexa-timeline-export.html",
       autoApprove,
+      sandbox,
       model,
       executionMode,
     };
   }
   if (first === "explain") {
-    return { mode: "explain", targetFile: filteredArgs[1], autoApprove, model, executionMode };
+    return { mode: "explain", targetFile: filteredArgs[1], autoApprove, sandbox, model, executionMode };
   }
   if (first === "plan") {
-    return { mode: "plan", taskPrompt: filteredArgs.slice(1).join(" "), autoApprove, model, executionMode: "PLAN" };
+    return { mode: "plan", taskPrompt: filteredArgs.slice(1).join(" "), autoApprove, sandbox, model, executionMode: "PLAN" };
   }
 
   // Any positional argument string is treated as a direct task prompt
-  return { mode: "task", taskPrompt: filteredArgs.join(" "), autoApprove, model, executionMode };
+  return { mode: "task", taskPrompt: filteredArgs.join(" "), autoApprove, sandbox, model, executionMode };
 }
 
 export const cliArgs = parseCliArgs();

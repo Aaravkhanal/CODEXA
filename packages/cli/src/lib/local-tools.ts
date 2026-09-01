@@ -3,6 +3,8 @@ import { existsSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "path";
 import { toolInputSchemas, Mode, type ModeType } from "@codexa/shared";
 import { execSync } from "node:child_process";
+import { executeSandboxedCommand } from "./sandbox";
+import { cliArgs } from "./cli-args";
 
 const MAX_FILE_SIZE = 10_000;
 const MAX_RESULTS = 200;
@@ -251,6 +253,28 @@ export async function executeLocalTool(
     case "bash": {
       const { command, timeout = DEFAULT_TIMEOUT } =
         toolInputSchemas.bash.parse(input);
+
+      const useSandbox = Boolean(process.env.CODEXA_SANDBOX === "true" || cliArgs?.sandbox);
+
+      if (useSandbox) {
+        try {
+          const sandboxedRes = await executeSandboxedCommand(command, resolveInsideCwd(".").resolved, timeout);
+          return {
+            stdout: truncate(sandboxedRes.stdout, MAX_OUTPUT),
+            stderr: truncate(sandboxedRes.stderr, MAX_OUTPUT),
+            exitCode: sandboxedRes.exitCode,
+            boundary: sandboxedRes.boundary,
+          };
+        } catch (err: any) {
+          return {
+            stdout: "",
+            stderr: truncate(`Sandbox execution failed: ${err.message}`, MAX_OUTPUT),
+            exitCode: 1,
+            boundary: "[Sandboxed Execution: failed]",
+          };
+        }
+      }
+
       const proc = spawnShell(command, resolveInsideCwd(".").resolved);
       const timer = setTimeout(() => proc.kill(), timeout);
       const [stdout, stderr] = await Promise.all([
@@ -263,6 +287,7 @@ export async function executeLocalTool(
         stdout: truncate(stdout, MAX_OUTPUT),
         stderr: truncate(stderr, MAX_OUTPUT),
         exitCode,
+        boundary: "[Host Execution: direct]",
       };
     }
 
