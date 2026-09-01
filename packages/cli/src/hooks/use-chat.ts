@@ -22,7 +22,8 @@ import { executeLocalTool } from "../lib/local-tools";
 import { useCodexaLens } from "../providers/codexalens";
 import { detectProject } from "../lib/project-detector";
 import { getProjectRules } from "../lib/project-rules";
-import { getPermissionLevel } from "../lib/permission-manager";
+import { getPermissionLevel, shouldAutoApproveTool } from "../lib/permission-manager";
+import { cliArgs } from "../lib/cli-args";
 import { saveFileSnapshot } from "../lib/snapshot-manager";
 
 function activityEvent(
@@ -142,15 +143,13 @@ export function useChat(
         transport,
         onToolCall({ toolCall }) {
             const mode = chat.messages.at(-1)?.metadata?.mode ?? "BUILD";
-            const permission = getPermissionLevel(toolCall.toolName, toolCall.input);
-            
+            const autoApproved = shouldAutoApproveTool(toolCall.toolName, toolCall.input, cliArgs.autoApprove);
             const formatToolArgsString = (tc: any): string => {
                 if (!tc.input) return "";
                 if (typeof tc.input !== "object") return String(tc.input);
                 return Object.entries(tc.input).map(([k, v]) => `${k}: ${v}`).join(", ");
             };
-
-            const proceedPromise = permission === "dangerous" && options?.askConfirmation
+            const proceedPromise = !autoApproved && options?.askConfirmation
                 ? options.askConfirmation(toolCall.toolName, formatToolArgsString(toolCall))
                 : Promise.resolve(true);
 

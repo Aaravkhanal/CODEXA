@@ -38,7 +38,6 @@ export function getPermissionLevel(toolName: string, input: any): PermissionLeve
 
   if (toolName === "bash") {
     const command = String(input?.command || "");
-    // Check if command matches any destructive patterns
     const isDestructive = DESTRUCTIVE_COMMAND_PATTERNS.some((pattern) => pattern.test(command));
     return isDestructive ? "dangerous" : "moderate";
   }
@@ -47,6 +46,15 @@ export function getPermissionLevel(toolName: string, input: any): PermissionLeve
     return "moderate";
   }
 
-  // Fallback default: anything else is considered dangerous to execute
   return "dangerous";
+}
+
+export function shouldAutoApproveTool(
+  toolName: string,
+  input: any,
+  globalAutoApprove: boolean = false
+): boolean {
+  if (globalAutoApprove) return true;
+  const level = getPermissionLevel(toolName, input);
+  return level === "safe";
 }

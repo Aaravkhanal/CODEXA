@@ -3,6 +3,7 @@ declare const CODEXA_OPENTUI_LIBC: string | undefined;
 
 import { cliArgs } from "./lib/cli-args";
 import { detectProject } from "./lib/project-detector";
+import { execSync } from "node:child_process";
 
 const version = typeof CODEXA_VERSION === "string" ? CODEXA_VERSION : "dev";
 const args = process.argv.slice(2);
@@ -14,21 +15,28 @@ if (args.includes("--version") || args.includes("-v")) {
 
 Usage:
   codexa [options]
-  codexa setup
-  codexa review
-  codexa scan
-  codexa explain <file>
-  codexa plan "<prompt>"
-  codexa "<prompt>"
+  codexa commit           Analyze git status/diff and generate commit
+  codexa setup            Interactive auth & API keys setup
+  codexa review           Review uncommitted git changes for potential bugs
+  codexa scan             Scan project structure and index CodexaLens graph
+  codexa explain <file>   Explain source code file structure
+  codexa plan "<prompt>"  Create step-by-step implementation plan (PLAN mode)
+  codexa "<prompt>"       Execute task prompt directly in terminal
 
 Options:
-  -h, --help       Show this help message
-  -v, --version    Show the installed CODEXA version
-  --status         Print project detection information and exit
+  -h, --help               Show this help message
+  -v, --version            Show the installed CODEXA version
+  -y, --auto-approve       Auto-approve tool execution (non-interactive mode)
+  --model <name>           Specify model (e.g. claude-3-5-sonnet, gpt-4o, gemini-2.5-flash)
+  --mode <PLAN|BUILD>      Execution mode (PLAN read-only vs BUILD write mode)
+  --status                 Print project detection information and exit
 
 Environment:
-  API_URL          Override the CODEXA API endpoint`);
-} else if (args.includes("--status")) {
+  API_URL                  Override the CODEXA API endpoint
+  ANTHROPIC_API_KEY        Anthropic API key for direct local LLM execution
+  OPENAI_API_KEY           OpenAI API key for direct local LLM execution
+  GOOGLE_API_KEY           Google Gemini API key for direct local LLM execution`);
+} else if (cliArgs.mode === "status") {
   const info = detectProject();
   console.log(`Project: ${info.name}`);
   console.log(`Path: ${info.path}`);
@@ -38,6 +46,22 @@ Environment:
   console.log(`Test Framework: ${info.testFramework}`);
   console.log(`Git Status: ${info.gitStatus}`);
   console.log(`Files: ${info.fileCount}`);
+} else if (cliArgs.mode === "commit") {
+  try {
+    const status = execSync("git status --porcelain", { encoding: "utf-8" }).trim();
+    if (!status) {
+      console.log("No uncommitted changes found in Git repository.");
+    } else {
+      console.log("Uncommitted changes detected:\n" + status);
+      console.log("\nStaging files and launching CODEXA session to generate commit...");
+      if (typeof CODEXA_OPENTUI_LIBC === "string" && CODEXA_OPENTUI_LIBC) {
+        process.env.OPENTUI_LIBC = CODEXA_OPENTUI_LIBC;
+      }
+      await import("./app");
+    }
+  } catch (err: any) {
+    console.error("Git commit command failed:", err.message);
+  }
 } else {
   if (typeof CODEXA_OPENTUI_LIBC === "string" && CODEXA_OPENTUI_LIBC) {
     process.env.OPENTUI_LIBC = CODEXA_OPENTUI_LIBC;
