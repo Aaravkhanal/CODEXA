@@ -50,6 +50,14 @@
 
 - Terminal-first coding workflow with a focused OpenTUI interface.
 - PLAN mode for read-only investigation and BUILD mode for implementation.
+- **Post-edit BUILD verification loop**: automatically detects and runs your project's test/lint command after file edits, feeds failures back for one bounded retry, and logs every attempt to the CodexaLens Timeline.
+- **🔒 Local-Only Semantic Search**: on-disk TF-IDF code search inside `/lens` — zero external API calls, 100% private.
+- **`codexa lens export`**: dumps a completed session's Timeline, test results, token cost, and diff summary into a self-contained HTML report for PR descriptions.
+- **Opt-in Docker Sandbox** for BUILD-mode shell commands (`--sandbox` / `CODEXA_SANDBOX=true`). Direct host execution remains the default. CLI output explicitly shows `[Sandboxed Execution: docker]` vs `[Host Execution: direct]`.
+- **Per-command approval granularity**: `always_allow`, `ask`, `deny` rules matchable by tool name or command regex. Fail-closed by default (unlisted = `ask`; PLAN mode write tools = `deny`).
+- **Sub-agent delegation**: BUILD sessions can spawn scoped child agents with their own token budget and PLAN/BUILD state; results appear as nested Timeline entries.
+- **`bun run bench`**: reproducible local benchmark harness — runs pass/fail verification tasks and outputs cost-per-task. See [docs/BENCHMARKS.md](./docs/BENCHMARKS.md).
+- `codexa doctor` for environment, API key, and MCP config diagnostics.
 - Persistent sessions that can be reopened from `/sessions`.
 - Model selection, agent switching, login, and themes from the command menu.
 - CodexaLens for local code exploration, workspace search, dependency context, and replaying agent activity.
@@ -213,14 +221,25 @@ The full-screen interface provides three views:
 - **Graph** shows TypeScript dependency relationships and highlights files touched
   by the agent.
 - **Workspace** provides read-only, line-numbered file previews plus capped filename
-  and content search. Press `/` to search, `Enter` to open a file, `Tab` to switch
-  panes, and `j`/`k` or the arrow keys to navigate.
+  and content search, powered by a **🔒 100% local-only TF-IDF semantic index** — no code ever leaves your machine. Press `/` to search, `Enter` to open a file, `Tab` to switch panes, and `j`/`k` or the arrow keys to navigate.
 - **Timeline** replays tool activity and summarizes changed files, failures, model
-  runs, tokens, elapsed time, and estimated cost.
+  runs, tokens, elapsed time, and estimated cost. Sub-agent delegations appear as
+  nested Timeline entries under the parent session.
 
 Use `F1`, `F2`, and `F3` to switch between Graph, Workspace, and Timeline when an
 active session is available. Selecting a file or event and pressing `Enter` opens
 the relevant source file in the Workspace view.
+
+### Session Export
+
+Export a completed session as a standalone HTML report:
+
+```sh
+codexa lens export [output.html]
+```
+
+The report contains the full Timeline, test/lint results, files modified, token
+cost, and estimated spend — suitable for including in PR descriptions.
 
 CodexaLens is intentionally project-scoped and source stays on the local machine;
 the Railway API receives session activity but does not receive file contents.
@@ -319,11 +338,20 @@ Run tests:
 bun test
 ```
 
-Run the complete local quality gate:
+Run the complete local quality gate (lint + typecheck + test + web build):
 
 ```sh
 bun run check
 ```
+
+Run the benchmark harness (pass/fail verification tasks + cost estimates):
+
+```sh
+bun run bench        # run all tasks
+bun run bench:dry    # list tasks without executing
+```
+
+See [docs/BENCHMARKS.md](./docs/BENCHMARKS.md) for methodology and how to add tasks.
 
 ## Releases
 

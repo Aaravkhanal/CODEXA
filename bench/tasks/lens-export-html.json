@@ -1,0 +1,8 @@
+{
+  "id": "lens-export-produces-html",
+  "description": "codexa lens export writes a valid HTML file to disk",
+  "workdir": ".",
+  "verifyCommand": "bun run packages/cli/src/index.tsx lens export /tmp/bench-lens-test.html && grep -q 'CODEXA Session Activity Report' /tmp/bench-lens-test.html",
+  "teardownCommand": "rm -f /tmp/bench-lens-test.html",
+  "tokenBudget": 50
+}

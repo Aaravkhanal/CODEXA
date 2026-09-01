@@ -1,0 +1,7 @@
+{
+  "id": "cli-help-contains-lens",
+  "description": "CLI --help output includes 'lens export' subcommand documentation",
+  "workdir": ".",
+  "verifyCommand": "bun run packages/cli/src/index.tsx --help | grep -q 'lens export'",
+  "tokenBudget": 50
+}

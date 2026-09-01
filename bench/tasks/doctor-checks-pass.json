@@ -1,0 +1,7 @@
+{
+  "id": "doctor-checks-pass",
+  "description": "codexa doctor runs and outputs structured diagnostic results",
+  "workdir": ".",
+  "verifyCommand": "bun run packages/cli/src/index.tsx doctor 2>&1 | grep -q 'Running CODEXA System Diagnostics'",
+  "tokenBudget": 50
+}

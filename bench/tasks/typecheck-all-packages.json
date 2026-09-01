@@ -1,0 +1,7 @@
+{
+  "id": "typecheck-all-packages",
+  "description": "TypeScript typechecks cleanly across all packages",
+  "workdir": ".",
+  "verifyCommand": "bun run typecheck",
+  "tokenBudget": 100
+}

@@ -1,0 +1,7 @@
+{
+  "id": "verify-bun-tests-pass",
+  "description": "All bun test suite tests pass with exit code 0",
+  "workdir": ".",
+  "verifyCommand": "bun test --bail",
+  "tokenBudget": 200
+}

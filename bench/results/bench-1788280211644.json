@@ -1,0 +1,62 @@
+{
+  "runId": "bench-1788280211644",
+  "timestamp": "2026-09-01T16:30:11.645Z",
+  "totalTasks": 5,
+  "passed": 5,
+  "failed": 0,
+  "skipped": 0,
+  "totalDurationMs": 5721,
+  "totalEstimatedCostUsd": 0.000114,
+  "results": [
+    {
+      "taskId": "lens-export-produces-html",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 62,
+      "stdout": "Exporting CodexaLens session timeline report...\n✓ HTML Session Report exported successfully to: /tmp/bench-lens-test.html",
+      "stderr": "",
+      "estimatedTokens": 31,
+      "estimatedCostUsd": 0.000093
+    },
+    {
+      "taskId": "verify-bun-tests-pass",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 302,
+      "stdout": "bun test v1.4.0 (34cbb9a40)",
+      "stderr": "",
+      "estimatedTokens": 7,
+      "estimatedCostUsd": 0.000021000000000000002
+    },
+    {
+      "taskId": "doctor-checks-pass",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 38,
+      "stdout": "",
+      "stderr": "",
+      "estimatedTokens": 0,
+      "estimatedCostUsd": 0
+    },
+    {
+      "taskId": "typecheck-all-packages",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 5296,
+      "stdout": "",
+      "stderr": "",
+      "estimatedTokens": 0,
+      "estimatedCostUsd": 0
+    },
+    {
+      "taskId": "cli-help-contains-lens",
+      "passed": true,
+      "exitCode": 0,
+      "durationMs": 23,
+      "stdout": "",
+      "stderr": "",
+      "estimatedTokens": 0,
+      "estimatedCostUsd": 0
+    }
+  ]
+}

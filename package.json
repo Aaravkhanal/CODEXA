@@ -19,6 +19,8 @@
     "lint": "biome lint .",
     "format": "biome format --write --staged",
     "check": "bun run lint && bun run typecheck && bun test && bun run build:web",
+    "bench": "bun scripts/bench.ts",
+    "bench:dry": "bun scripts/bench.ts --dry",
     "link:cli": "bun run build:cli && cd packages/cli && bun link",
     "release:build": "bun scripts/build-release.ts",
     "release:smoke": "bun scripts/smoke-release.ts"
