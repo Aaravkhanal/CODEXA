@@ -4,6 +4,7 @@ export type CliMode =
   | "interactive"
   | "setup"
   | "status"
+  | "doctor"
   | "review"
   | "explain"
   | "plan"
@@ -25,6 +26,7 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
   let model: string | undefined;
   let executionMode: "PLAN" | "BUILD" | undefined;
   let isStatus = false;
+  let isDoctor = false;
   const filteredArgs: string[] = [];
 
   for (let i = 0; i < argv.length; i++) {
@@ -33,6 +35,8 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
       autoApprove = true;
     } else if (arg === "--status") {
       isStatus = true;
+    } else if (arg === "--doctor" || arg === "doctor") {
+      isDoctor = true;
     } else if (arg === "--model" && argv[i + 1]) {
       model = argv[++i];
     } else if (arg === "--mode" && argv[i + 1]) {
@@ -41,6 +45,10 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
     } else if (!arg.startsWith("-")) {
       filteredArgs.push(arg);
     }
+  }
+
+  if (isDoctor) {
+    return { mode: "doctor", autoApprove, model, executionMode };
   }
 
   if (isStatus) {
@@ -54,6 +62,7 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
   const first = filteredArgs[0]!;
 
   if (first === "setup") return { mode: "setup", autoApprove, model, executionMode };
+  if (first === "doctor") return { mode: "doctor", autoApprove, model, executionMode };
   if (first === "review") return { mode: "review", autoApprove, model, executionMode };
   if (first === "scan") return { mode: "scan", autoApprove, model, executionMode };
   if (first === "commit") return { mode: "commit", autoApprove, model, executionMode };

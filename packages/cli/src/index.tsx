@@ -3,6 +3,7 @@ declare const CODEXA_OPENTUI_LIBC: string | undefined;
 
 import { cliArgs } from "./lib/cli-args";
 import { detectProject } from "./lib/project-detector";
+import { printDoctorReport } from "./lib/doctor";
 import { execSync } from "node:child_process";
 
 const version = typeof CODEXA_VERSION === "string" ? CODEXA_VERSION : "dev";
@@ -15,6 +16,7 @@ if (args.includes("--version") || args.includes("-v")) {
 
 Usage:
   codexa [options]
+  codexa doctor           Run diagnostic checks on environment, keys, and MCP config
   codexa commit           Analyze git status/diff and generate commit
   codexa setup            Interactive auth & API keys setup
   codexa review           Review uncommitted git changes for potential bugs
@@ -27,6 +29,7 @@ Options:
   -h, --help               Show this help message
   -v, --version            Show the installed CODEXA version
   -y, --auto-approve       Auto-approve tool execution (non-interactive mode)
+  --doctor                 Run system diagnostic checks and exit
   --model <name>           Specify model (e.g. claude-3-5-sonnet, gpt-4o, gemini-2.5-flash)
   --mode <PLAN|BUILD>      Execution mode (PLAN read-only vs BUILD write mode)
   --status                 Print project detection information and exit
@@ -36,6 +39,9 @@ Environment:
   ANTHROPIC_API_KEY        Anthropic API key for direct local LLM execution
   OPENAI_API_KEY           OpenAI API key for direct local LLM execution
   GOOGLE_API_KEY           Google Gemini API key for direct local LLM execution`);
+} else if (cliArgs.mode === "doctor") {
+  const success = await printDoctorReport();
+  process.exit(success ? 0 : 1);
 } else if (cliArgs.mode === "status") {
   const info = detectProject();
   console.log(`Project: ${info.name}`);
