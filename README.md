@@ -1,5 +1,13 @@
 <p align="center">
-  <img src="./packages/web/public/og-image.png" alt="CODEXA - open-source terminal coding agent" width="100%" />
+  <img src="./packages/web/public/demo.gif" alt="CODEXA - open-source terminal coding agent" width="100%" />
+</p>
+
+<p align="center">
+  <a href="https://github.com/Aaravkhanal/CODEXA/actions/workflows/ci.yml"><img src="https://github.com/Aaravkhanal/CODEXA/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
+  <a href="https://github.com/Aaravkhanal/CODEXA/releases"><img src="https://img.shields.io/github/v/release/Aaravkhanal/CODEXA" alt="Releases" /></a>
+  <a href="https://github.com/Aaravkhanal/CODEXA/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-brightgreen.svg" alt="License: MIT" /></a>
+  <a href="https://github.com/Aaravkhanal/CODEXA/actions/workflows/codeql-analysis.yml"><img src="https://github.com/Aaravkhanal/CODEXA/actions/workflows/codeql-analysis.yml/badge.svg" alt="CodeQL" /></a>
+  <a href="https://codecov.io/gh/Aaravkhanal/CODEXA"><img src="https://img.shields.io/codecov/c/github/Aaravkhanal/CODEXA" alt="Coverage" /></a>
 </p>
 
 <p align="center">
@@ -18,13 +26,25 @@
 
 # CODEXA
 
-CODEXA is an open-source, terminal-native coding agent. It gives you streaming
-AI responses, persistent sessions, PLAN and BUILD modes, local repository tools,
-CodexaLens codebase intelligence, themes, and optional Model Context Protocol (MCP)
-integrations without pulling you out of the terminal.
+> **Elevator Pitch:** CODEXA is a high-performance, terminal-native AI coding agent built with Bun, TypeScript, and OpenTUI for lightning-fast PLAN & BUILD workflows without leaving your shell.
 
-It is built as a Bun monorepo with a terminal client, API server, shared package,
-database package, and a Vite-powered landing page.
+---
+
+### Key Technical Architecture Highlights
+
+1. **Dual Execution Engine (PLAN vs. BUILD)**: Strict isolation of read-only codebase exploration (PLAN mode) from active multi-file mutations and terminal execution (BUILD mode).
+2. **CodexaLens Code Intelligence**: Fast local AST & regex dependency graph analyzer, active context timeline recorder, and token/credit usage tracking engine.
+3. **Isolated MCP Plugin Engine**: Dynamic tool discovery and policy enforcement supporting both stdio and HTTP Model Context Protocol (MCP) servers via `.codexa/mcp.json`.
+
+---
+
+### 💬 What I'd Talk About in an Interview
+
+- **Monorepo Architecture & Bun Ecosystem**: Managing multi-package TypeScript applications (`cli`, `server`, `database`, `shared`, `web`) with Bun's native workspace runner, single-file compilation, and fast test framework.
+- **Pseudoterminal (PTY) Testing & UI Engineering**: Building deterministic terminal UI components with OpenTUI and testing CLI workflows end-to-end using PTY automation scripts in CI.
+- **Security Boundaries & Tool Isolation**: Designing fail-closed authentication middleware, environment isolation, and fine-grained tool execution permissions for LLM agents.
+
+---
 
 ## Highlights
 
@@ -32,8 +52,7 @@ database package, and a Vite-powered landing page.
 - PLAN mode for read-only investigation and BUILD mode for implementation.
 - Persistent sessions that can be reopened from `/sessions`.
 - Model selection, agent switching, login, and themes from the command menu.
-- CodexaLens for local code exploration, workspace search, dependency context, and
-  replaying agent activity.
+- CodexaLens for local code exploration, workspace search, dependency context, and replaying agent activity.
 - MCP server discovery through project-local `.codexa/mcp.json`.
 - GitHub Releases for standalone binaries on macOS, Linux, and Windows.
 - Homebrew support for macOS and Linux installs.

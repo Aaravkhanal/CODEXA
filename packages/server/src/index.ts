@@ -71,7 +71,7 @@ const routes = app
   .route("/codexalens", codexalens)
   .route("/billing", billing);
 
-// Dev-only endpoint to serve OpenAPI YAML documentation
+// Dev-only endpoint to serve OpenAPI YAML documentation & Swagger UI
 if (process.env.NODE_ENV !== "production") {
   app.get("/docs", async (c) => {
     try {
@@ -85,6 +85,37 @@ if (process.env.NODE_ENV !== "production") {
     } catch (error) {
       return c.text("Failed to load OpenAPI spec", 500);
     }
+  });
+
+  app.get("/swagger", (c) => {
+    c.header("Content-Type", "text/html");
+    return c.html(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CODEXA API Documentation - Swagger UI</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+  <style>
+    body { margin: 0; padding: 0; background: #0b0f19; color: #fff; }
+    .swagger-ui { filter: invert(88%) hue-rotate(180deg); }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    window.onload = () => {
+      SwaggerUIBundle({
+        url: '/docs',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [SwaggerUIBundle.presets.apis],
+      });
+    };
+  </script>
+</body>
+</html>`);
   });
 }
 

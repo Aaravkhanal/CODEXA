@@ -2,18 +2,25 @@
 
 <!-- What changed, and why? Keep this focused on the problem being solved. -->
 
-## Verification
+## Changes Included
 
-<!-- List the commands or manual flows used to verify the change. -->
+- [ ] New feature / enhancement
+- [ ] Bug fix
+- [ ] Refactoring / performance improvement
+- [ ] Documentation update
+- [ ] CI / Workflow / Dependency update
 
-- [ ] `bun run check`
-- [ ] Relevant platform or release smoke tests, when applicable
-- [ ] Screenshots or terminal output included for visible UI changes
+## Verification & Testing
 
-## Safety checklist
+- [ ] `bun test` passes locally
+- [ ] `bun run typecheck` passes cleanly
+- [ ] `bun run lint` passes with no errors
+- [ ] Screenshots, GIF, or terminal recording included for visible UI changes (if applicable)
+- [ ] Tested on target environment (macOS / Linux / Windows)
 
-- [ ] The pull request is scoped and contains no temporary or generated files
-- [ ] Tests cover new or changed behavior
-- [ ] No secrets, credentials, private URLs, or personal data are included
-- [ ] Documentation and `.env.example` are updated when configuration changes
-- [ ] Breaking behavior and migration steps are clearly described
+## PR Checklist
+
+- [ ] Branch is named correctly according to conventions (`feat/*`, `fix/*`, `chore/*`, `ci/*`, `docs/*`, `test/*`)
+- [ ] Commit messages follow Conventional Commits format (`feat:`, `fix:`, `chore:`, etc.)
+- [ ] No secrets, credentials, or generated temporary files included
+- [ ] Documentation updated (if applicable)

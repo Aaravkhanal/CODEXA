@@ -1,0 +1,32 @@
+name: Good First Issue
+description: Propose or file a task suitable for new open-source contributors.
+title: "[Good First Issue]: "
+labels: ["good-first-issue", "help-wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a good first issue! This helps newcomers get onboarded into the CODEXA codebase.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Description & Goal
+      description: What needs to be built, fixed, or documented?
+      placeholder: e.g. Add unit test for helper function X, polish UI element Y, update docs for feature Z.
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Affected Files
+      description: Which file(s) in packages/{cli,server,database,shared,web} should be touched?
+      placeholder: e.g. packages/server/src/lib/models.ts
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Recommended Steps & Acceptance Criteria
+      description: Outline the exact steps or criteria to complete this issue.
+    validations:
+      required: true
