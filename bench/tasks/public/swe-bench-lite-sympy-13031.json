@@ -1,0 +1,9 @@
+{
+  "id": "swe-bench-lite-sympy-13031",
+  "description": "SWE-bench Lite (sympy__sympy-13031): Matrix.hstack/vstack return empty Matrix on zero inputs",
+  "suite": "public-swe-bench",
+  "workdir": ".",
+  "agentPrompt": "In sympy/matrices/dense.py, fix Matrix.hstack and Matrix.vstack behavior when operating on empty or 0-row matrices so that they correctly return an empty Matrix object instead of raising a shape mismatch exception.",
+  "verifyCommand": "bun test packages/cli/test/sub-agent.test.ts",
+  "tokenBudget": 1500
+}

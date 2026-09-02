@@ -95,6 +95,38 @@ Tasks can optionally include an `agentPrompt` field that runs the sub-agent dele
 
 ---
 
+## Public Benchmark Harness (SWE-bench & Terminal-Bench Integration)
+
+CODEXA supports running benchmark tasks derived from recognized public benchmarks such as **SWE-bench Lite** and **Terminal-Bench**. Public benchmark task definitions are located under `bench/tasks/public/` and tagged with `"suite": "public-swe-bench"` or `"suite": "public-terminal-bench"`.
+
+### Execution Commands
+
+```sh
+bun run bench:public          # Run all public benchmark suite tasks (offline mode)
+bun run bench:public --live   # Run public benchmark tasks against live LLM model
+```
+
+### Integrated Public Benchmark Tasks
+
+| Task ID | Suite | Description | Token Budget |
+|---|---|---|---|
+| `swe-bench-lite-sympy-13031` | `public-swe-bench` | Fix Matrix.hstack/vstack empty zero-row return behavior in SymPy | 1500 |
+| `terminal-bench-git-conflict` | `public-terminal-bench` | Resolve multi-file git merge conflicts and verify clean working tree | 1000 |
+
+### Reproduction & Methodology
+
+- **Model Context**: Live evaluations are executed against `claude-3-5-sonnet` via `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`.
+- **Environment**: Isolated workspace directory with child sub-agent token budget caps.
+- **Verification**: Post-execution shell verification command (`verifyCommand`) determines pass (exit 0) or fail.
+
+> [!NOTE]
+> **Live Execution Results Placeholder**: Live benchmark evaluation requires an active API key and external LLM API access. Offline test suite runs execute default verification steps. To run and capture live benchmark scores:
+> ```sh
+> ANTHROPIC_API_KEY="your-key" bun run bench:public --live
+> ```
+
+---
+
 ## Reading Results
 
 JSON result files in `bench/results/` are structured as `BenchmarkReport`:

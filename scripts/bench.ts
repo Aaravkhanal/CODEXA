@@ -40,6 +40,8 @@ export interface BenchmarkTask {
   tokenBudget?: number;
   /** Prompt for an agent-backed benchmark task (runs CODEXA before verifyCommand) */
   agentPrompt?: string;
+  /** Benchmark suite grouping: "local", "public-swe-bench", "public-terminal-bench" */
+  suite?: string;
 }
 
 export interface BenchmarkResult {
@@ -71,22 +73,32 @@ export interface BenchmarkReport {
 // ---------------------------------------------------------------------------
 
 /**
- * Load task definitions from bench/tasks/*.json
- * Each .json file must conform to BenchmarkTask.
+ * Recursively load task definitions from bench/tasks json files
  */
 function loadTasksSync(tasksDir: string): BenchmarkTask[] {
   if (!existsSync(tasksDir)) return [];
-  const { readdirSync } = require("node:fs");
-  const files: string[] = readdirSync(tasksDir).filter((f: string) => f.endsWith(".json"));
+  const { readdirSync, statSync } = require("node:fs");
   const tasks: BenchmarkTask[] = [];
-  for (const file of files) {
-    try {
-      const raw = readFileSync(join(tasksDir, file), "utf-8");
-      tasks.push(JSON.parse(raw) as BenchmarkTask);
-    } catch (err: any) {
-      console.warn(`⚠  Skipping malformed task file ${file}: ${err.message}`);
+
+  function scanDir(dir: string) {
+    const entries = readdirSync(dir);
+    for (const entry of entries) {
+      const fullPath = join(dir, entry);
+      const stat = statSync(fullPath);
+      if (stat.isDirectory()) {
+        scanDir(fullPath);
+      } else if (entry.endsWith(".json")) {
+        try {
+          const raw = readFileSync(fullPath, "utf-8");
+          tasks.push(JSON.parse(raw) as BenchmarkTask);
+        } catch (err: any) {
+          console.warn(`⚠  Skipping malformed task file ${entry}: ${err.message}`);
+        }
+      }
     }
   }
+
+  scanDir(tasksDir);
   return tasks;
 }
 
@@ -247,10 +259,19 @@ const RESULTS_DIR = join(REPO_ROOT, "bench", "results");
 const argv = process.argv.slice(2);
 const dryRun = argv.includes("--dry");
 const isLive = argv.includes("--live");
+const isPublic = argv.includes("--public");
 const taskFilter = argv.includes("--task") ? argv[argv.indexOf("--task") + 1] : undefined;
 
 const allTasks = loadTasksSync(TASKS_DIR);
-const tasks = taskFilter ? allTasks.filter((t) => t.id === taskFilter) : allTasks;
+let tasks = allTasks;
+
+if (taskFilter) {
+  tasks = allTasks.filter((t) => t.id === taskFilter);
+} else if (isPublic) {
+  tasks = allTasks.filter((t) => Boolean(t.suite && t.suite.startsWith("public-")));
+} else {
+  tasks = allTasks.filter((t) => !t.suite || !t.suite.startsWith("public-"));
+}
 
 if (tasks.length === 0) {
   console.log("No benchmark tasks found. Add task JSON files to bench/tasks/.");

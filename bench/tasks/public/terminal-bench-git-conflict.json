@@ -1,0 +1,9 @@
+{
+  "id": "terminal-bench-git-conflict",
+  "description": "Terminal-Bench: Resolve git merge conflict and finalize clean commit status",
+  "suite": "public-terminal-bench",
+  "workdir": ".",
+  "agentPrompt": "Inspect current git status and resolve merge conflict in target repository cleanly without leaving conflict markers.",
+  "verifyCommand": "git status --porcelain",
+  "tokenBudget": 1000
+}
