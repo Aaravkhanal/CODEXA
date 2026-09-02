@@ -308,8 +308,9 @@ after completion, failure, or interruption.
 | `packages/shared` | Shared schemas, model metadata, and CodexaLens graph types |
 | `packages/database` | Prisma schema, generated client, and database adapter |
 | `packages/web` | Vite React landing page |
+| `packages/vscode` | VS Code companion extension scaffold (integrated terminal launcher + CodexaLens sidebar view) |
 | `scripts` | Release, packaging, Homebrew, and smoke-test scripts |
-| `docs` | Release and operational documentation |
+| `docs` | Release, sandbox, benchmarks, and extension documentation |
 
 ## Development
 

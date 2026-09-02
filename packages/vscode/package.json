@@ -1,0 +1,61 @@
+{
+  "name": "@codexa/vscode",
+  "displayName": "CODEXA AI Coding Agent",
+  "description": "VS Code companion extension scaffold for CODEXA: integrated terminal session launcher & CodexaLens sidebar view",
+  "version": "0.2.0",
+  "publisher": "codexa",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onCommand:codexa.launch",
+    "onView:codexaLensView"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "codexa.launch",
+        "title": "CODEXA: Launch Terminal Session"
+      },
+      {
+        "command": "codexa.openLens",
+        "title": "CODEXA: Refresh CodexaLens Sidebar"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codexa-explorer",
+          "title": "CODEXA",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "codexa-explorer": [
+        {
+          "type": "webview",
+          "id": "codexaLensView",
+          "name": "CodexaLens Graph & Timeline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "bun build ./src/extension.ts --outdir ./dist --target node --external vscode",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@codexa/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "5.9.3"
+  }
+}
