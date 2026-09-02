@@ -59,8 +59,10 @@ export {
 } from "./env-schema";
 
 export {
+  LocalTfidfIndex,
   LocalSemanticIndex,
   type IndexDocument,
+  type TfidfSearchResult,
   type SemanticSearchResult,
 } from "./local-semantic-index";
 

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { LocalSemanticIndex } from "./local-semantic-index";
+import { LocalTfidfIndex } from "./local-semantic-index";
 
-describe("Local Semantic Indexer", () => {
-  it("indexes documents locally and searches by semantic query relevance", () => {
-    const index = new LocalSemanticIndex();
+describe("Local TF-IDF Code Indexer", () => {
+  it("indexes documents locally and searches by statistical term relevance", () => {
+    const index = new LocalTfidfIndex();
     index.addDocument("src/auth.ts", "export function authenticateUser(token: string) { return verifyJwt(token); }");
     index.addDocument("src/payments/retry.ts", "export function retryFailedPayment(invoiceId: string) { return processPayment(invoiceId); }");
     index.addDocument("src/db.ts", "export const prisma = new PrismaClient();");

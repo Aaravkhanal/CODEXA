@@ -222,7 +222,7 @@ The full-screen interface provides three views:
 - **Graph** shows TypeScript dependency relationships and highlights files touched
   by the agent.
 - **Workspace** provides read-only, line-numbered file previews plus capped filename
-  and content search, powered by a **🔒 100% local-only TF-IDF semantic index** — no code ever leaves your machine. Press `/` to search, `Enter` to open a file, `Tab` to switch panes, and `j`/`k` or the arrow keys to navigate.
+  and content search, powered by a **🔒 100% local-only statistical TF-IDF code index** — no code ever leaves your machine. Press `/` to search, `Enter` to open a file, `Tab` to switch panes, and `j`/`k` or the arrow keys to navigate.
 - **Timeline** replays tool activity and summarizes changed files, failures, model
   runs, tokens, elapsed time, and estimated cost. Sub-agent delegations appear as
   nested Timeline entries under the parent session.

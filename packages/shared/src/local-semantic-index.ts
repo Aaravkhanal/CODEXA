@@ -1,10 +1,10 @@
 /**
-  * 🔒 CODEXA Local Semantic Indexer
-  * 
-  * 100% Local-Only Guarantee: All tokenization, vector building, TF-IDF calculation,
-  * and semantic search queries operate exclusively on your local device.
-  * No code contents or embeddings are sent to any external server or network.
-  */
+ * 🔒 CODEXA Local TF-IDF Code Indexer
+ * 
+ * 100% Local-Only Guarantee: All tokenization, term weighting, TF-IDF calculation,
+ * and statistical code search queries operate exclusively on your local device.
+ * No code contents or queries are sent to any external server or network.
+ */
 
 export interface IndexDocument {
   path: string;
@@ -12,13 +12,15 @@ export interface IndexDocument {
   totalTokens: number;
 }
 
-export interface SemanticSearchResult {
+export interface TfidfSearchResult {
   path: string;
   score: number;
   snippet?: string;
 }
 
-export class LocalSemanticIndex {
+export type SemanticSearchResult = TfidfSearchResult;
+
+export class LocalTfidfIndex {
   private documents = new Map<string, IndexDocument>();
   private documentFrequency = new Map<string, number>();
 
@@ -34,7 +36,7 @@ export class LocalSemanticIndex {
     return words;
   }
 
-  /** Add or update a file in the local semantic index */
+  /** Add or update a file in the local TF-IDF code index */
   public addDocument(path: string, content: string): void {
     const tokens = this.tokenize(content);
     const tokenMap = new Map<string, number>();
@@ -77,7 +79,7 @@ export class LocalSemanticIndex {
   }
 
   /** Query the local index using TF-IDF term vector similarity */
-  public search(query: string, limit: number = 10): SemanticSearchResult[] {
+  public search(query: string, limit: number = 10): TfidfSearchResult[] {
     const queryTokens = this.tokenize(query);
     if (queryTokens.length === 0 || this.documents.size === 0) return [];
 
@@ -117,3 +119,7 @@ export class LocalSemanticIndex {
     };
   }
 }
+
+/** Backward-compatibility alias */
+export const LocalSemanticIndex = LocalTfidfIndex;
+
