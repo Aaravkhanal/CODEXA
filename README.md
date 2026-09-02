@@ -62,6 +62,7 @@
 - Persistent sessions that can be reopened from `/sessions`.
 - Model selection, agent switching, login, and themes from the command menu.
 - CodexaLens for local code exploration, workspace search, dependency context, and replaying agent activity.
+- **Cost-Aware Model Routing**: Opt-in automatic routing (`routing.enabled = true` / `CODEXA_ROUTING_ENABLED=true`) that routes PLAN-mode read-only exploration to fast/cheap models (`claude-3-5-haiku` / `gpt-4o-mini`) while reserving primary frontier models (`claude-opus-4-6` / `gpt-5.4`) for BUILD-mode code modifications, saving ~75-85% on exploration queries.
 - MCP server discovery through project-local `.codexa/mcp.json`.
 - GitHub Releases for standalone binaries on macOS, Linux, and Windows.
 - Homebrew support for macOS and Linux installs.
@@ -73,6 +74,7 @@
 |---|---|---|---|---|
 | **PLAN vs. BUILD Isolation** | **✓ Strict** (Enforced at tool schema level) | Plan mode available | Architect mode available | Prompt-based |
 | **Hardened Container Sandbox** | **✓ Built-in** (`--network none`, CPU/RAM caps, POSIX user) | Host bash default | Host execution default | Host execution default |
+| **Cost-Aware Model Routing** | **✓ Opt-in** (Auto-routes PLAN queries to fast models, saving 75-85%) | Manual selection | Model setting | Manual selection |
 | **Timeline Replay & HTML Export** | **✓ Built-in** (`/lens` timeline + `codexa lens export`) | Terminal logs | Git commits / markdown logs | Terminal logs |
 | **Granular MCP Approval Policy** | **✓ Granular** (Regex matching, fail-closed `ask`/`deny`) | Tool permission prompts | Auto-commit / prompts | Prompt-based |
 | **Sub-Agent Delegation** | **✓ Built-in** (Child sessions with isolated token caps) | Sub-agent delegation | Varies | Varies |

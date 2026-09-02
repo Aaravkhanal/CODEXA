@@ -122,7 +122,82 @@ export type SupportedChatModel = (typeof SUPPORTED_CHAT_MODELS)[number];
 export type SupportedChatModelId = SupportedChatModel["id"];
 
 export function findSupportedChatModel(modelId: string) {
-    return SUPPORTED_CHAT_MODELS.find((model) => model.id === modelId);
+  return SUPPORTED_CHAT_MODELS.find((model) => model.id === modelId);
 }
 
 export const DEFAULT_CHAT_MODEL_ID: SupportedChatModelId = "claude-opus-4-6";
+export const DEFAULT_PLAN_CHAT_MODEL_ID: SupportedChatModelId = "claude-3-5-haiku";
+
+export interface ModelRoutingOptions {
+  enabled?: boolean;
+  planModelId?: SupportedChatModelId | string;
+  buildModelId?: SupportedChatModelId | string;
+}
+
+export interface RoutedModelResult {
+  activeModelId: string;
+  originalModelId: string;
+  routed: boolean;
+  savingsPercent: number;
+  reason: string;
+}
+
+/** Calculate cost in USD for token usage under a specific model */
+export function calculateModelCost(
+  modelId: string,
+  inputTokens: number,
+  outputTokens: number,
+): number {
+  const model = findSupportedChatModel(modelId);
+  if (!model) return 0;
+  return (
+    (inputTokens * model.pricing.inputUsdPerMillionTokens +
+      outputTokens * model.pricing.outputUsdPerMillionTokens) /
+    1_000_000
+  );
+}
+
+/** Calculate estimated savings between primary model and routed plan model */
+export function calculateRoutingSavings(
+  primaryModelId: string,
+  planModelId: string,
+  sampleInputTokens: number = 1000,
+  sampleOutputTokens: number = 500,
+): { primaryCost: number; planCost: number; savingsUsd: number; savingsPercent: number } {
+  const primaryCost = calculateModelCost(primaryModelId, sampleInputTokens, sampleOutputTokens);
+  const planCost = calculateModelCost(planModelId, sampleInputTokens, sampleOutputTokens);
+  const savingsUsd = Math.max(0, primaryCost - planCost);
+  const savingsPercent = primaryCost > 0 ? Math.round((savingsUsd / primaryCost) * 100) : 0;
+  return { primaryCost, planCost, savingsUsd, savingsPercent };
+}
+
+/** Resolve active model based on session execution mode (PLAN vs BUILD) and routing configuration */
+export function resolveCostAwareModel(
+  mode: "plan" | "build",
+  selectedModelId: string = DEFAULT_CHAT_MODEL_ID,
+  options: ModelRoutingOptions = {},
+): RoutedModelResult {
+  const enabled = options.enabled ?? false;
+
+  if (!enabled || mode !== "plan") {
+    const activeModelId = (mode === "build" && options.buildModelId) ? options.buildModelId : selectedModelId;
+    return {
+      activeModelId,
+      originalModelId: selectedModelId,
+      routed: false,
+      savingsPercent: 0,
+      reason: enabled ? "BUILD mode uses primary implementation model" : "Model routing disabled",
+    };
+  }
+
+  const planModelId = options.planModelId || DEFAULT_PLAN_CHAT_MODEL_ID;
+  const { savingsPercent } = calculateRoutingSavings(selectedModelId, planModelId);
+
+  return {
+    activeModelId: planModelId,
+    originalModelId: selectedModelId,
+    routed: true,
+    savingsPercent,
+    reason: `PLAN mode routed to ${planModelId} (~${savingsPercent}% cost savings vs ${selectedModelId})`,
+  };
+}

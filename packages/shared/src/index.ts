@@ -1,11 +1,17 @@
 export {
   SUPPORTED_CHAT_MODELS,
   DEFAULT_CHAT_MODEL_ID,
+  DEFAULT_PLAN_CHAT_MODEL_ID,
   findSupportedChatModel,
+  calculateModelCost,
+  calculateRoutingSavings,
+  resolveCostAwareModel,
   type ModelPricing,
   type SupportedProvider,
   type SupportedChatModel,
   type SupportedChatModelId,
+  type ModelRoutingOptions,
+  type RoutedModelResult,
 } from "./models";
 
 export {
