@@ -67,6 +67,17 @@
 - Homebrew support for macOS and Linux installs.
 - Static landing page in `packages/web`.
 
+## Feature Comparison
+
+| Capability | CODEXA | Claude Code | Aider | OpenCode |
+|---|---|---|---|---|
+| **PLAN vs. BUILD Isolation** | **✓ Strict** (Enforced at tool schema level) | Plan mode available | Architect mode available | Prompt-based |
+| **Hardened Container Sandbox** | **✓ Built-in** (`--network none`, CPU/RAM caps, POSIX user) | Host bash default | Host execution default | Host execution default |
+| **Timeline Replay & HTML Export** | **✓ Built-in** (`/lens` timeline + `codexa lens export`) | Terminal logs | Git commits / markdown logs | Terminal logs |
+| **Granular MCP Approval Policy** | **✓ Granular** (Regex matching, fail-closed `ask`/`deny`) | Tool permission prompts | Auto-commit / prompts | Prompt-based |
+| **Sub-Agent Delegation** | **✓ Built-in** (Child sessions with isolated token caps) | Sub-agent delegation | Varies | Varies |
+| **Local Code Search & Graphing** | **✓ 100% Local** (AST graph + TF-IDF statistical search) | Grep / AST search | Repo map (tree-sitter/ctags) | LSP / search |
+
 ## Install
 
 ### Clone & Run Directly
