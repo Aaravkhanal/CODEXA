@@ -55,8 +55,9 @@
 - **`codexa lens export`**: dumps a completed session's Timeline, test results, token cost, and diff summary into a self-contained HTML report for PR descriptions.
 - **Opt-in Docker Sandbox** for BUILD-mode shell commands (`--sandbox` / `CODEXA_SANDBOX=true`). Direct host execution remains the default. CLI output explicitly shows `[Sandboxed Execution: docker]` vs `[Host Execution: direct]`.
 - **Per-command approval granularity**: `always_allow`, `ask`, `deny` rules matchable by tool name or command regex. Fail-closed by default (unlisted = `ask`; PLAN mode write tools = `deny`).
-- **Sub-agent delegation**: BUILD sessions can spawn scoped child agents with their own token budget and PLAN/BUILD state; results appear as nested Timeline entries.
-- **`bun run bench`**: reproducible local benchmark harness — runs pass/fail verification tasks and outputs cost-per-task. See [docs/BENCHMARKS.md](./docs/BENCHMARKS.md).
+- **Sub-agent delegation**: BUILD sessions can spawn scoped child agents with their own token budget, isolated system prompt, and PLAN/BUILD state via the CODEXA `/chat` endpoint or direct provider keys, with offline fallback; results appear as nested Timeline entries.
+- **`bun run bench` & Agent-Backed Tasks**: reproducible local benchmark harness supporting both offline tool verification and live agent-backed tasks (`agentPrompt`) with per-task cost and token tracking (`bun run bench`, `bun run bench --live`). See [docs/BENCHMARKS.md](./docs/BENCHMARKS.md).
+- **CI Code-Signing & Notarization**: GitHub Actions release pipeline supports automated macOS `codesign` + `notarytool` and Windows Authenticode `signtool` binary signing.
 - `codexa doctor` for environment, API key, and MCP config diagnostics.
 - Persistent sessions that can be reopened from `/sessions`.
 - Model selection, agent switching, login, and themes from the command menu.
@@ -344,11 +345,12 @@ Run the complete local quality gate (lint + typecheck + test + web build):
 bun run check
 ```
 
-Run the benchmark harness (pass/fail verification tasks + cost estimates):
+Run the benchmark harness (pass/fail verification tasks + agent-backed tasks + cost estimates):
 
 ```sh
-bun run bench        # run all tasks
-bun run bench:dry    # list tasks without executing
+bun run bench          # run all benchmark tasks
+bun run bench --live   # run benchmark with live agent execution
+bun run bench:dry      # list tasks without executing
 ```
 
 See [docs/BENCHMARKS.md](./docs/BENCHMARKS.md) for methodology and how to add tasks.
