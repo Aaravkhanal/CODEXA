@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { isDockerAvailable } from "../src/lib/sandbox";
+import { isDockerAvailable, resolveSandboxConfig } from "../src/lib/sandbox";
 import { evaluateCommandPermission, shouldAutoApproveTool } from "../src/lib/permission-manager";
 import { Mode } from "@codexa/shared";
 
@@ -27,5 +27,12 @@ describe("Phase 2 — Sandboxed Execution & Per-Command Policy", () => {
     expect(shouldAutoApproveTool("readFile", { path: "src/index.ts" })).toBe(true);
     expect(shouldAutoApproveTool("writeFile", { path: "src/index.ts" }, false, Mode.PLAN)).toBe(false);
     expect(shouldAutoApproveTool("writeFile", { path: "src/index.ts" }, true, Mode.BUILD)).toBe(true);
+  });
+
+  it("resolves default hardened sandbox configuration with network isolation", () => {
+    const config = resolveSandboxConfig(process.cwd());
+    expect(config.network).toBe("none");
+    expect(config.cpus).toBe("2");
+    expect(config.memory).toBe("2g");
   });
 });
