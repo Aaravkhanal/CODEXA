@@ -160,6 +160,41 @@ jobs:
             mv "$directory" "artifacts/$target"
           done
           chmod +x artifacts/darwin-*/codexa artifacts/linux-*/codexa
+      - name: Sign macOS Binaries
+        if: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
+          security create-keychain -p "$APPLE_KEYCHAIN_PASSWORD" build.keychain || true
+          security default-keychain -s build.keychain || true
+          security unlock-keychain -p "$APPLE_KEYCHAIN_PASSWORD" build.keychain || true
+          security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign || true
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$APPLE_KEYCHAIN_PASSWORD" build.keychain || true
+          for target in artifacts/darwin-*/codexa; do
+            if [ -f "$target" ]; then
+              codesign --deep --force --options runtime --sign "Developer ID Application: (${APPLE_TEAM_ID})" "$target" || true
+            fi
+          done
+          rm -f certificate.p12
+      - name: Sign Windows Binaries
+        if: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 != '' }}
+        env:
+          WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          echo "$WINDOWS_CERTIFICATE_BASE64" | base64 --decode > cert.pfx
+          for target in artifacts/windows-*/codexa.exe; do
+            if [ -f "$target" ]; then
+              signtool sign /f cert.pfx /p "$WINDOWS_CERT_PASSWORD" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "$target" || true
+            fi
+          done
+          rm -f cert.pfx
       - name: Package release assets
         run: bash scripts/package-release.sh "${GITHUB_REF_NAME#v}"
       - name: Attest release assets

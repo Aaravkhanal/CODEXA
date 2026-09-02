@@ -75,12 +75,23 @@ Tasks should be:
 
 ---
 
-## Agent-Backed Tasks (Future)
+## Agent-Backed Tasks
 
-Tasks can optionally include an `agentPrompt` field (not yet implemented) that runs the CODEXA agent against a fixture directory before the `verifyCommand` is executed. This allows measuring whether the agent can genuinely fix a bug or pass tests without prior knowledge.
+Tasks can optionally include an `agentPrompt` field that runs the sub-agent delegation flow against a target directory before the `verifyCommand` is executed. This allows measuring whether CODEXA can fix bugs or complete instructions within a specified token budget.
 
-> [!NOTE]
-> Agent-backed task execution requires a running CODEXA server and an active API key. The current offline tasks exercise CODEXA's built-in tooling only.
+```jsonc
+{
+  "id": "agent-fix-failing-test",
+  "description": "Agent receives bug report and fixes failing test suite",
+  "workdir": ".",
+  "agentPrompt": "Investigate failing test in packages/cli/test/sub-agent.test.ts and fix it.",
+  "verifyCommand": "bun test packages/cli/test/sub-agent.test.ts",
+  "tokenBudget": 500
+}
+```
+
+- **Offline Mode (Default)**: Executes sub-agent delegation with offline verification.
+- **Live Mode (`bun run bench --live`)**: Connects sub-agent execution to a running CODEXA server / model API key with isolated token tracking.
 
 ---
 

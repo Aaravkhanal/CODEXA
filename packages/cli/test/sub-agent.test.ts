@@ -74,4 +74,25 @@ describe("Sub-Agent Delegation", () => {
     expect(result.output).toContain("does not exist");
     expect(result.timelineEvents[0]!.status).toBe("failed");
   });
+
+  it("handles LiveAgentContext with server fallback gracefully", async () => {
+    const result = await spawnSubAgent(
+      {
+        id: "test-live-fallback",
+        goal: "Fix bug in calculation module",
+        cwd: process.cwd(),
+        maxTokens: 500,
+        verifyCommand: "echo 'verified live task'",
+      },
+      "parent-session-test",
+      {
+        apiUrl: "http://127.0.0.1:9999", // non-existent server to trigger fallback
+        apiKey: "test-key",
+      },
+    );
+
+    expect(result.passed).toBe(true); // verifyCommand passes during fallback
+    expect(result.output).toContain("Falling back to verification step");
+    expect(result.output).toContain("verified live task");
+  });
 });

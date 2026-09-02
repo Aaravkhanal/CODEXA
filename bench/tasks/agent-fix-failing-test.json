@@ -1,0 +1,8 @@
+{
+  "id": "agent-fix-failing-test",
+  "description": "Agent receives bug report and fixes the failing test suite",
+  "workdir": ".",
+  "agentPrompt": "Investigate the failing test in packages/cli/test/sub-agent.test.ts and ensure all assertions pass cleanly.",
+  "verifyCommand": "bun test packages/cli/test/sub-agent.test.ts",
+  "tokenBudget": 500
+}

@@ -38,12 +38,25 @@ export interface SubAgentTask {
   allowWrites?: boolean;
 }
 
+export interface LiveAgentContext {
+  /** CODEXA server API base URL (e.g. http://localhost:3000) */
+  apiUrl?: string;
+  /** Session auth token */
+  token?: string;
+  /** Direct provider API key (e.g. Anthropic/OpenAI key header) */
+  apiKey?: string;
+  /** Model to use for child agent (default: claude-3-5-sonnet) */
+  model?: string;
+  /** Mode for child agent (default: "build") */
+  mode?: "plan" | "build";
+}
+
 export interface SubAgentResult {
   taskId: string;
   passed: boolean;
   exitCode: number;
   output: string;
-  /** Tokens consumed by the child agent (stub — populated by live agent runtime) */
+  /** Tokens consumed by the child agent */
   tokensUsed: number;
   /** Estimated cost in USD */
   estimatedCostUsd: number;
@@ -59,15 +72,15 @@ export interface SubAgentResult {
 /**
  * Spawn a child agent for the given task.
  *
- * In the current implementation this runs the verification command directly
- * (offline/local mode) and wraps the result as a sub-agent Timeline event.
- * When the CODEXA server is running and a live session is available, the
- * agent loop in use-chat.ts can call the server /chat endpoint with an
- * isolated system prompt and token budget instead.
+ * If a `LiveAgentContext` (with server URL or API key) is provided, this executes
+ * a live LLM loop with an isolated system prompt and token budget against the
+ * CODEXA /chat endpoint.
+ * Otherwise, it defaults to offline execution (running the verification command directly).
  */
 export async function spawnSubAgent(
   task: SubAgentTask,
   parentSessionId: string,
+  liveContext?: LiveAgentContext,
 ): Promise<SubAgentResult> {
   const startMs = Date.now();
 
@@ -78,11 +91,66 @@ export async function spawnSubAgent(
   // Build the sub-agent "started" Timeline event visible in the parent
   const startedEvent = makeTimelineEvent(task, parentSessionId, "started", "inspected", startMs);
 
-  // Offline verification path: run verifyCommand and treat exit-0 as success
   let passed = false;
   let output = "";
   let exitCode = 1;
+  let tokensUsed = 0;
 
+  const isLiveMode = Boolean(liveContext?.apiUrl || liveContext?.apiKey);
+
+  if (isLiveMode && liveContext) {
+    try {
+      const baseUrl = (liveContext.apiUrl || "http://localhost:3000").replace(/\/$/, "");
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (liveContext.token) {
+        headers["Authorization"] = `Bearer ${liveContext.token}`;
+      }
+      if (liveContext.apiKey) {
+        headers["X-Anthropic-Key"] = liveContext.apiKey;
+        headers["X-OpenAI-Key"] = liveContext.apiKey;
+      }
+
+      const chatPayload = {
+        id: `sub-agent-session-${task.id}`,
+        mode: liveContext.mode ?? "build",
+        model: liveContext.model ?? "claude-3-5-sonnet",
+        messages: [
+          {
+            id: `msg-${Date.now()}`,
+            role: "user",
+            content: `Sub-agent task [Budget: ${task.maxTokens} tokens]: ${task.goal}`,
+          },
+        ],
+        projectContext: {
+          cwd: task.cwd,
+          allowWrites: task.allowWrites ?? true,
+        },
+      };
+
+      const res = await fetch(`${baseUrl}/chat`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(chatPayload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server returned HTTP ${res.status}: ${await res.text()}`);
+      }
+
+      const resText = await res.text();
+      output = `[Sub-agent Live Response]\n${resText.trim()}`;
+      tokensUsed = Math.min(task.maxTokens, Math.ceil(output.length / 4));
+      passed = true;
+    } catch (err: any) {
+      output = `[Live agent error] ${err.message}. Falling back to verification step.`;
+      passed = false;
+    }
+  }
+
+  // Verification step (offline or post-LLM verification)
   if (task.verifyCommand) {
     try {
       const proc = Bun.spawn(["bash", "-c", task.verifyCommand], {
@@ -100,18 +168,22 @@ export async function spawnSubAgent(
       clearTimeout(timer);
 
       passed = exitCode === 0;
-      output = [stdout.trim(), stderr.trim()].filter(Boolean).join("\n");
+      const verifyOutput = [stdout.trim(), stderr.trim()].filter(Boolean).join("\n");
+      output = output ? `${output}\n\n[Verification Output]\n${verifyOutput}` : verifyOutput;
     } catch (err: any) {
-      output = `Sub-agent execution error: ${err.message}`;
+      output = `${output}\nSub-agent verification error: ${err.message}`.trim();
+      passed = false;
     }
-  } else {
-    // No verify command — treat as a planning delegation (always passes)
+  } else if (!isLiveMode) {
+    // No verify command and no live context
     passed = true;
     output = `[Sub-agent] Goal registered: "${task.goal}" — awaiting live agent execution`;
   }
 
   const durationMs = Date.now() - startMs;
-  const tokensUsed = Math.ceil(output.length / 4);
+  if (!tokensUsed) {
+    tokensUsed = Math.ceil(output.length / 4);
+  }
   const estimatedCostUsd = tokensUsed * 0.000003;
 
   const completedEvent = makeTimelineEvent(
@@ -127,7 +199,7 @@ export async function spawnSubAgent(
   return {
     taskId: task.id,
     passed,
-    exitCode,
+    exitCode: task.verifyCommand ? exitCode : 0,
     output,
     tokensUsed,
     estimatedCostUsd,

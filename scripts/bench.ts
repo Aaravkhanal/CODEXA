@@ -17,6 +17,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
 
+import { spawnSubAgent, type LiveAgentContext } from "../packages/cli/src/lib/sub-agent";
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -34,8 +36,10 @@ export interface BenchmarkTask {
   setupCommand?: string;
   /** Optional teardown shell command (always runs even on failure) */
   teardownCommand?: string;
-  /** Estimated token budget for this task (informational only) */
+  /** Estimated token budget for this task (informational or live execution cap) */
   tokenBudget?: number;
+  /** Prompt for an agent-backed benchmark task (runs CODEXA before verifyCommand) */
+  agentPrompt?: string;
 }
 
 export interface BenchmarkResult {
@@ -45,8 +49,7 @@ export interface BenchmarkResult {
   durationMs: number;
   stdout: string;
   stderr: string;
-  /** Rough token estimate based on output length (agent output not available
-   *  in offline mode; this is a stub for when live agent runs are wired up) */
+  /** Token estimate based on output length or live sub-agent execution */
   estimatedTokens: number;
   estimatedCostUsd: number;
 }
@@ -104,7 +107,7 @@ function runShell(cmd: string, cwd: string, timeoutMs = 30_000): { stdout: strin
   }
 }
 
-async function runTask(task: BenchmarkTask, repoRoot: string): Promise<BenchmarkResult> {
+async function runTask(task: BenchmarkTask, repoRoot: string, isLive = false): Promise<BenchmarkResult> {
   const cwd = resolve(repoRoot, task.workdir);
   const start = Date.now();
 
@@ -125,13 +128,42 @@ async function runTask(task: BenchmarkTask, repoRoot: string): Promise<Benchmark
     }
   }
 
+  let agentTokens = 0;
+  let agentCost = 0;
+  let agentOutput = "";
+
+  // Agent-backed execution step (if agentPrompt is set)
+  if (task.agentPrompt) {
+    const liveContext: LiveAgentContext | undefined = isLive || process.env.CODEXA_API_URL || process.env.ANTHROPIC_API_KEY
+      ? {
+          apiUrl: process.env.CODEXA_API_URL || "http://localhost:3000",
+          apiKey: process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY,
+        }
+      : undefined;
+
+    const subAgentResult = await spawnSubAgent(
+      {
+        id: `bench-${task.id}`,
+        goal: task.agentPrompt,
+        cwd,
+        maxTokens: task.tokenBudget ?? 500,
+      },
+      "bench-harness",
+      liveContext,
+    );
+
+    agentTokens = subAgentResult.tokensUsed;
+    agentCost = subAgentResult.estimatedCostUsd;
+    agentOutput = subAgentResult.output;
+  }
+
   // Verify
   const result = runShell(task.verifyCommand, cwd, 60_000);
   const durationMs = Date.now() - start;
   const passed = result.exitCode === 0;
   const outputLength = result.stdout.length + result.stderr.length;
-  const estimatedTokens = Math.ceil(outputLength / 4);
-  const estimatedCostUsd = estimatedTokens * 0.000003;
+  const estimatedTokens = agentTokens || Math.ceil(outputLength / 4);
+  const estimatedCostUsd = agentCost || estimatedTokens * 0.000003;
 
   // Teardown (always)
   if (task.teardownCommand) {
@@ -143,7 +175,7 @@ async function runTask(task: BenchmarkTask, repoRoot: string): Promise<Benchmark
     passed,
     exitCode: result.exitCode,
     durationMs,
-    stdout: result.stdout.slice(0, 2000),
+    stdout: [agentOutput, result.stdout].filter(Boolean).join("\n").slice(0, 2000),
     stderr: result.stderr.slice(0, 2000),
     estimatedTokens,
     estimatedCostUsd,
@@ -214,6 +246,7 @@ const RESULTS_DIR = join(REPO_ROOT, "bench", "results");
 
 const argv = process.argv.slice(2);
 const dryRun = argv.includes("--dry");
+const isLive = argv.includes("--live");
 const taskFilter = argv.includes("--task") ? argv[argv.indexOf("--task") + 1] : undefined;
 
 const allTasks = loadTasksSync(TASKS_DIR);
@@ -228,7 +261,8 @@ if (tasks.length === 0) {
 if (dryRun) {
   console.log(`\n${BOLD}Benchmark tasks (dry run):${RESET}`);
   for (const t of tasks) {
-    console.log(`  ${SKIP} ${t.id.padEnd(30)} ${t.description}`);
+    const agentTag = t.agentPrompt ? " [Agent-backed]" : "";
+    console.log(`  ${SKIP} ${t.id.padEnd(30)} ${t.description}${agentTag}`);
   }
   console.log(`\n  ${tasks.length} task(s) listed.\n`);
   process.exit(0);
@@ -240,11 +274,11 @@ const timestamp = new Date().toISOString();
 const results: BenchmarkResult[] = [];
 let totalDurationMs = 0;
 
-console.log(`\n${BOLD}CODEXA Benchmark${RESET}  ·  ${tasks.length} task(s)  ·  ${timestamp}\n`);
+console.log(`\n${BOLD}CODEXA Benchmark${RESET}  ·  ${tasks.length} task(s)${isLive ? " [LIVE MODE]" : ""}  ·  ${timestamp}\n`);
 
 for (const task of tasks) {
   process.stdout.write(`  Running ${BOLD}${task.id}${RESET} ... `);
-  const result = await runTask(task, REPO_ROOT);
+  const result = await runTask(task, REPO_ROOT, isLive);
   results.push(result);
   totalDurationMs += result.durationMs;
   console.log(`${result.passed ? PASS + " PASS" : FAIL + " FAIL"} (${formatMs(result.durationMs)})`);
