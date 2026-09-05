@@ -1,16 +1,45 @@
 {
-  "name": "@codexa/cli",
+  "name": "codexa",
   "version": "0.2.0",
+  "description": "AI Software Engineering Agent — runs in your terminal, works in any project",
   "module": "src/index.tsx",
   "type": "module",
-  "private": true,
+  "private": false,
+  "license": "MIT",
+  "homepage": "https://github.com/Aaravkhanal/CODEXA",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Aaravkhanal/CODEXA.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Aaravkhanal/CODEXA/issues"
+  },
+  "keywords": [
+    "ai",
+    "coding-agent",
+    "cli",
+    "terminal",
+    "anthropic",
+    "openai",
+    "ollama",
+    "llm",
+    "software-engineering"
+  ],
   "bin": {
-    "codexa": "./bin/codexa"
+    "codexa": "./bin/codexa.cjs"
   },
   "scripts": {
     "dev": "bun run --watch src/index.tsx",
-    "build": "bun build src/index.tsx --outdir dist --target bun --packages external"
+    "build": "bun build src/index.tsx --outdir dist --target bun --packages external",
+    "postinstall": "node scripts/postinstall.cjs"
   },
+  "files": [
+    "bin/",
+    "scripts/postinstall.cjs",
+    "src/",
+    "package.json",
+    "README.md"
+  ],
   "devDependencies": {
     "@codexa/server": "workspace:*",
     "@types/bun": "latest",
@@ -21,6 +50,7 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.61",
+    "@codexa/agent": "workspace:*",
     "@codexa/shared": "workspace:*",
     "@opentui/core": "^0.4.3",
     "@opentui/react": "^0.4.3",

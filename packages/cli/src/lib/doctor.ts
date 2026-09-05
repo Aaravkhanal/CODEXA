@@ -1,9 +1,25 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
-import { getAllApiKeys } from "./api-keys";
-import { detectProject } from "./project-detector";
-import { loadMcpConfig } from "../../../server/src/mcp/config";
+import { getAllApiKeys } from "./api-keys.ts";
+import { detectProject } from "./project-detector.ts";
+import { getGlobalConfig, getProfile, CODEXA_DIR } from "./global-config.ts";
+import { isOllamaRunning } from "@codexa/agent";
+
+// Inline minimal MCP config loader (avoids importing from packages/server)
+async function loadMcpConfig(cwd: string) {
+  const configPath = join(cwd, ".codexa", "mcp.json");
+  if (!existsSync(configPath)) {
+    return { exists: false, config: { servers: {} }, configPath };
+  }
+  try {
+    const config = JSON.parse(readFileSync(configPath, "utf-8"));
+    return { exists: true, config, configPath };
+  } catch (err: any) {
+    throw new Error(`Failed to parse ${configPath}: ${err.message}`);
+  }
+}
+
 
 export interface DoctorCheckResult {
   name: string;

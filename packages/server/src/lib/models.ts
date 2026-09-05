@@ -1,6 +1,6 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
-import { createGoogle } from "@ai-sdk/google";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 import {
   findSupportedChatModel,
@@ -95,7 +95,7 @@ function resolveOpenAIModel(modelId: OpenAIModelId, apiKey?: string): ResolvedMo
 }
 
 function resolveGoogleModel(modelId: GoogleModelId, apiKey?: string): ResolvedModel {
-  const google = createGoogle({
+  const google = createGoogleGenerativeAI({
     apiKey: apiKey ?? process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY,
   });
   let sdkModelId: string = modelId;
