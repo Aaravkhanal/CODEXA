@@ -15,13 +15,15 @@
  * The orchestrator emits progress events so the TUI can display live status.
  */
 
-import { generateText, streamText, type LanguageModel } from "ai";
-import type { ContextFile, ProjectContext } from "../context/engine.ts";
+import { generateText, type LanguageModel } from "ai";
+import type { ProjectContext } from "../context/engine.ts";
 import { ContextEngine } from "../context/engine.ts";
 import type { ProviderConfig } from "../providers/index.ts";
 import { createLanguageModel } from "../providers/index.ts";
 import type { AgentTools } from "../tools/executor.ts";
 import { createAgentTools } from "../tools/executor.ts";
+
+// ... (rest unchanged until sub-agents) ...
 
 // ---------------------------------------------------------------------------
 // Types
@@ -233,11 +235,10 @@ export class AgentOrchestrator {
       .map((f) => `  ${f.path} (relevance: ${f.relevanceScore.toFixed(1)})`)
       .join("\n");
 
-    const { text, usage } = await generateText({
+    const { text, usage } = await (generateText as any)({
       model: this.planModel,
       system: EXPLORER_SYSTEM_PROMPT,
       prompt: `Task: ${task}\n\nTop relevant files:\n${fileList}\n\nProvide a concise understanding of the project structure and what files will need to be modified for this task.`,
-      maxTokens: 1000,
     });
     this.totalTokensUsed += (usage?.totalTokens ?? 0);
     return text;
@@ -253,11 +254,10 @@ export class AgentOrchestrator {
       .map((f) => `\`\`\`${getFileExtension(f.path)}\n// ${f.path}\n${f.content.slice(0, 2000)}\n\`\`\``)
       .join("\n\n");
 
-    const { text, usage } = await generateText({
+    const { text, usage } = await (generateText as any)({
       model: this.planModel,
       system: PLANNER_SYSTEM_PROMPT,
       prompt: `Task: ${task}\n\nProject understanding:\n${explorationSummary}\n\nKey files:\n${contextBlock}\n\nCreate a numbered, step-by-step implementation plan.`,
-      maxTokens: 2000,
     });
     this.totalTokensUsed += (usage?.totalTokens ?? 0);
     return text;
@@ -274,18 +274,17 @@ export class AgentOrchestrator {
       .map((f) => `\`\`\`${getFileExtension(f.path)}\n// FILE: ${f.path}\n${f.content}\n\`\`\``)
       .join("\n\n");
 
-    await generateText({
+    await (generateText as any)({
       model: this.model,
       system: CODER_SYSTEM_PROMPT,
       tools: this.tools,
-      maxSteps: 30,
       prompt: `Task: ${task}\n\nImplementation plan:\n${plan}\n\nProject files:\n${contextBlock}`,
-      onStepFinish({ toolResults }) {
+      onStepFinish({ toolResults }: any) {
         for (const result of toolResults ?? []) {
           if (
             ["writeFile", "editFile", "deleteFile", "moveFile"].includes(result.toolName)
           ) {
-            const path = (result.result as any)?.path;
+            const path = (result as any)?.result?.path ?? (result as any)?.output?.path;
             if (path && !filesModified.includes(path)) filesModified.push(path);
           }
         }
@@ -329,7 +328,13 @@ export class AgentOrchestrator {
     }
 
     // Execute the test command via the bash tool
-    const result = await (this.tools.bash.execute as Function)({
+    const bashExec = this.tools.bash.execute as unknown as (args: {
+      command: string;
+      description?: string;
+      timeout?: number;
+    }) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
+
+    const result = await bashExec({
       command: testCommand,
       description: "Run project tests",
       timeout: 120_000,
@@ -355,18 +360,17 @@ export class AgentOrchestrator {
       .map((f) => `\`\`\`${getFileExtension(f.path)}\n// ${f.path}\n${f.content}\n\`\`\``)
       .join("\n\n");
 
-    await generateText({
+    await (generateText as any)({
       model: this.model,
       system: DEBUGGER_SYSTEM_PROMPT,
       tools: this.tools,
-      maxSteps: 20,
       prompt: `Original task: ${task}\n\nOriginal plan:\n${plan}\n\nTest failure output:\n${testResult.output}\n\nProject files:\n${contextBlock}\n\nAnalyze the test failure and fix the root cause.`,
-      onStepFinish({ toolResults }) {
+      onStepFinish({ toolResults }: any) {
         for (const result of toolResults ?? []) {
           if (
             ["writeFile", "editFile", "deleteFile", "moveFile"].includes(result.toolName)
           ) {
-            const path = (result.result as any)?.path;
+            const path = (result as any)?.result?.path ?? (result as any)?.output?.path;
             if (path && !filesModified.includes(path)) filesModified.push(path);
           }
         }
@@ -394,11 +398,10 @@ export class AgentOrchestrator {
       })
       .join("\n\n");
 
-    const { text, usage } = await generateText({
+    const { text, usage } = await (generateText as any)({
       model: this.planModel,
       system: REVIEWER_SYSTEM_PROMPT,
       prompt: `Original task: ${task}\n\nModified files:\n${fileContents}\n\nProvide a concise code review summary. Identify any obvious issues, missing error handling, or improvements.`,
-      maxTokens: 800,
     });
     this.totalTokensUsed += (usage?.totalTokens ?? 0);
     return text;

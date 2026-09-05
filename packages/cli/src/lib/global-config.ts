@@ -321,6 +321,7 @@ function getDefaultModelForProvider(provider: ProviderName): string {
     case "ollama": return "llama3.2";
     case "openrouter": return "openai/gpt-4o";
     case "custom": return "gpt-4";
+    default: return "gpt-4o";
   }
 }
 

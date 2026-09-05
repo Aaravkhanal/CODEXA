@@ -185,10 +185,13 @@ export function createAgentTools(options: AgentToolsOptions) {
         const proc = Bun.spawn(["grep", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
         const [stdout] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
         const lines = stdout.split("\n").filter(Boolean).slice(0, 50);
-        const matches = lines.map((line) => {
-          const m = line.match(/^(.+?):(\d+):(.*)$/);
-          return m ? { file: relative(cwd, m[1]!).replaceAll("\\", "/"), line: Number(m[2]), content: m[3]! } : null;
-        }).filter(Boolean);
+        const matches = lines
+          .map((line) => {
+            const m = line.match(/^(.+?):(\d+):(.*)$/);
+            if (!m || !m[1] || !m[2] || !m[3]) return null;
+            return { file: relative(cwd, m[1]).replaceAll("\\", "/"), line: Number(m[2]), content: m[3] };
+          })
+          .filter((item): item is { file: string; line: number; content: string } => item !== null);
         return { matches };
       },
     }),
@@ -312,8 +315,8 @@ export function createAgentTools(options: AgentToolsOptions) {
         try {
           const stdout = execSync("git status --porcelain", { cwd, encoding: "utf-8" });
           return { isGit: true, status: stdout };
-        } catch (err: any) {
-          return { isGit: true, error: err.message };
+        } catch (err: unknown) {
+          return { isGit: true, error: (err as Error).message };
         }
       },
     }),
@@ -329,8 +332,8 @@ export function createAgentTools(options: AgentToolsOptions) {
           const cmd = staged ? "git diff --staged" : "git diff";
           const stdout = execSync(cmd, { cwd, encoding: "utf-8" });
           return { isGit: true, diff: stdout };
-        } catch (err: any) {
-          return { isGit: true, error: err.message };
+        } catch (err: unknown) {
+          return { isGit: true, error: (err as Error).message };
         }
       },
     }),
@@ -345,8 +348,8 @@ export function createAgentTools(options: AgentToolsOptions) {
         try {
           const stdout = execSync(`git log --oneline -n ${limit}`, { cwd, encoding: "utf-8" });
           return { isGit: true, log: stdout };
-        } catch (err: any) {
-          return { isGit: true, error: err.message };
+        } catch (err: unknown) {
+          return { isGit: true, error: (err as Error).message };
         }
       },
     }),

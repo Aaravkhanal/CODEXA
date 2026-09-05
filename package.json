@@ -15,7 +15,7 @@
     "build:web": "bun run --cwd packages/web build",
     "db:generate": "bun run --cwd packages/database db:generate",
     "db:push": "bun run --cwd packages/database db:push",
-    "typecheck": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/database/tsconfig.json && tsc --noEmit -p packages/server/tsconfig.json && tsc --noEmit -p packages/cli/tsconfig.json && tsc -b packages/web/tsconfig.json",
+    "typecheck": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/agent/tsconfig.json && tsc --noEmit -p packages/database/tsconfig.json && tsc --noEmit -p packages/server/tsconfig.json && tsc --noEmit -p packages/cli/tsconfig.json && tsc -b packages/web/tsconfig.json",
     "lint": "biome lint .",
     "format": "biome format --write --staged",
     "check": "bun run lint && bun run typecheck && bun test && bun run build:web",

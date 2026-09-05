@@ -199,9 +199,9 @@ export async function runSetupWizard(isReconfigure = false): Promise<boolean> {
       console.log(`\n${c.dim}Fetching available local models...${c.reset}`);
       const ollamaModels = await listOllamaModels(baseUrl);
       if (ollamaModels.length > 0) {
-        availableModels = ollamaModels.map((m) => m.name);
+        availableModels = ollamaModels.map((m: { name: string }) => m.name);
         console.log(`\n${c.cyan}${c.bold}Available local models:${c.reset}\n`);
-        availableModels.slice(0, 15).forEach((m, i) => {
+        availableModels.slice(0, 15).forEach((m: string, i: number) => {
           const marker = i === 0 ? `${c.green}❯${c.reset}` : " ";
           console.log(`  ${marker} ${i + 1}. ${m}`);
         });
@@ -228,7 +228,7 @@ export async function runSetupWizard(isReconfigure = false): Promise<boolean> {
       }
     } else if (availableModels.length > 0) {
       console.log(`\n${c.cyan}${c.bold}Select model:${c.reset}\n`);
-      availableModels.forEach((m, i) => {
+      availableModels.forEach((m: string, i: number) => {
         const marker = i === 0 ? `${c.green}❯${c.reset}` : " ";
         console.log(`  ${marker} ${i + 1}. ${m}`);
       });

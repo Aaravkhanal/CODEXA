@@ -161,11 +161,13 @@ async function runChangeModel(): Promise<void> {
 
     if (profile.provider === "ollama") {
       const ollamaModels = await listOllamaModels(profile.baseUrl);
-      if (ollamaModels.length > 0) models = ollamaModels.map((m) => m.name);
+      if (ollamaModels.length > 0) models = ollamaModels.map((m: { name: string }) => m.name);
     }
 
     if (models.length > 0) {
-      models.forEach((m, i) => console.log(`  ${i + 1}. ${m}`));
+      models.forEach((m: string, i: number) => {
+        console.log(`  ${i + 1}. ${m}`);
+      });
       console.log(`  ${models.length + 1}. Other (enter manually)\n`);
 
       const answer = (await ask(`${c.white}Select (1-${models.length + 1}): ${c.reset}`)).trim();
@@ -329,7 +331,9 @@ async function runManageProfiles(): Promise<void> {
       await runSetupWizard(true);
     } else if (choice === "s" && allProfiles.length > 1) {
       const names = allProfiles.map((p) => p.name);
-      names.forEach((n, i) => console.log(`  ${i + 1}. ${n}`));
+      names.forEach((n, i) => {
+        console.log(`  ${i + 1}. ${n}`);
+      });
       const ans = (await ask(`\n${c.white}Select profile (1-${names.length}): ${c.reset}`)).trim();
       const idx = parseInt(ans, 10) - 1;
       if (idx >= 0 && idx < names.length) {
@@ -341,7 +345,9 @@ async function runManageProfiles(): Promise<void> {
       if (deletable.length === 0) {
         console.log(`\n${c.yellow}Cannot delete the active profile.${c.reset}\n`);
       } else {
-        deletable.forEach((p, i) => console.log(`  ${i + 1}. ${p.name}`));
+        deletable.forEach((p, i) => {
+          console.log(`  ${i + 1}. ${p.name}`);
+        });
         const ans = (await ask(`\n${c.white}Select profile to delete (1-${deletable.length}): ${c.reset}`)).trim();
         const idx = parseInt(ans, 10) - 1;
         if (idx >= 0 && idx < deletable.length) {

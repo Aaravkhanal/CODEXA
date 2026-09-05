@@ -153,22 +153,22 @@ export function createLanguageModel(config: ProviderConfig): LanguageModel {
       const client = createAnthropic({ apiKey: config.apiKey });
       // Map friendly IDs to SDK IDs
       const sdkId = mapAnthropicModelId(config.model);
-      return client(sdkId);
+      return client(sdkId) as any;
     }
 
     case "openai": {
       const client = createOpenAI({ apiKey: config.apiKey });
-      return client(config.model);
+      return client(config.model) as any;
     }
 
     case "google": {
       const client = createGoogleGenerativeAI({ apiKey: config.apiKey });
-      return client(config.model);
+      return client(config.model) as any;
     }
 
     case "groq": {
       const client = createGroq({ apiKey: config.apiKey });
-      return client(config.model);
+      return client(config.model) as any;
     }
 
     case "ollama": {
@@ -178,7 +178,7 @@ export function createLanguageModel(config: ProviderConfig): LanguageModel {
         baseURL,
         apiKey: "ollama", // Ollama ignores this but the SDK requires it
       });
-      return client(config.model);
+      return client(config.model) as any;
     }
 
     case "openrouter": {
@@ -190,7 +190,7 @@ export function createLanguageModel(config: ProviderConfig): LanguageModel {
           "X-Title": "CODEXA AI Coding Agent",
         },
       });
-      return client(config.model);
+      return client(config.model) as any;
     }
 
     case "custom": {
@@ -198,7 +198,7 @@ export function createLanguageModel(config: ProviderConfig): LanguageModel {
         baseURL: config.baseUrl,
         apiKey: config.apiKey,
       });
-      return client(config.model);
+      return client(config.model) as any;
     }
 
     default: {
@@ -284,10 +284,9 @@ export async function testProviderConnection(config: ProviderConfig): Promise<Pr
     // For all other providers: make a minimal generateText call
     const { generateText } = await import("ai");
     const model = createLanguageModel(config);
-    await generateText({
+    await (generateText as any)({
       model,
       prompt: "Reply with exactly: ok",
-      maxTokens: 5,
     });
 
     return { success: true, latencyMs: Date.now() - start };

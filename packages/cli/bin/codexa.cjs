@@ -15,7 +15,7 @@
 
 const { execFileSync, spawnSync } = require("node:child_process");
 const { existsSync } = require("node:fs");
-const { join, dirname } = require("node:path");
+const { join } = require("node:path");
 const os = require("node:os");
 
 const PKG_DIR = join(__dirname, "..");

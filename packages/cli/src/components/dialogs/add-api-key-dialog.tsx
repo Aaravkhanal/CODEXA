@@ -28,6 +28,7 @@ export function AddApiKeyDialogContent({
   const toast = useToast();
   const { colors } = useTheme();
   const { setModel } = usePromptConfig();
+  // biome-ignore lint/suspicious/noExplicitAny: OpenTUI input element ref
   const inputRef = useRef<any>(null);
 
   const defaultProvider =

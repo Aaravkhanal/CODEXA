@@ -306,7 +306,7 @@ export const COMMANDS: Command[] = [
         } else {
           ctx.toast.show({ variant: "error", message: "Failed to clear session" });
         }
-      } catch (err) {
+      } catch {
         ctx.toast.show({ variant: "error", message: "Failed to clear session" });
       }
     },
