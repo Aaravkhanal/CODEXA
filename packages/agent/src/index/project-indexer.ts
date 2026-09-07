@@ -57,12 +57,12 @@ export class ProjectIndexer {
 
     // Detect Frameworks & Languages
     const allDeps = { ...dependencies, ...devDependencies };
-    if (allDeps["react"] || allDeps["react-dom"]) { frameworks.add("react"); languages.add("typescript"); }
-    if (allDeps["next"]) { frameworks.add("next.js"); languages.add("typescript"); }
-    if (allDeps["vue"]) frameworks.add("vue");
-    if (allDeps["express"]) frameworks.add("express");
-    if (allDeps["hono"]) frameworks.add("hono");
-    if (allDeps["@fastify/core"] || allDeps["fastify"]) frameworks.add("fastify");
+    if (allDeps.react || allDeps["react-dom"]) { frameworks.add("react"); languages.add("typescript"); }
+    if (allDeps.next) { frameworks.add("next.js"); languages.add("typescript"); }
+    if (allDeps.vue) frameworks.add("vue");
+    if (allDeps.express) frameworks.add("express");
+    if (allDeps.hono) frameworks.add("hono");
+    if (allDeps["@fastify/core"] || allDeps.fastify) frameworks.add("fastify");
 
     // Check Python
     if (existsSync(join(this.cwd, "requirements.txt")) || existsSync(join(this.cwd, "pyproject.toml"))) {
@@ -86,8 +86,8 @@ export class ProjectIndexer {
     let databaseType: string | undefined;
     if (allDeps["@prisma/client"] || existsSync(join(this.cwd, "prisma"))) databaseType = "prisma";
     else if (allDeps["drizzle-orm"]) databaseType = "drizzle";
-    else if (allDeps["pg"]) databaseType = "postgresql";
-    else if (allDeps["mongoose"]) databaseType = "mongodb";
+    else if (allDeps.pg) databaseType = "postgresql";
+    else if (allDeps.mongoose) databaseType = "mongodb";
 
     const graph: ProjectKnowledgeGraph = {
       projectName: name,

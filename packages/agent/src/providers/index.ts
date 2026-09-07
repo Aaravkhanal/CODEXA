@@ -173,7 +173,7 @@ export function createLanguageModel(config: ProviderConfig): LanguageModel {
 
     case "ollama": {
       // Ollama exposes an OpenAI-compatible API at /v1
-      const baseURL = (config.baseUrl ?? "http://localhost:11434").replace(/\/$/, "") + "/v1";
+      const baseURL = `${(config.baseUrl ?? "http://localhost:11434").replace(/\/$/, "")}/v1`;
       const client = createOpenAI({
         baseURL,
         apiKey: "ollama", // Ollama ignores this but the SDK requires it
@@ -223,7 +223,7 @@ export interface OllamaModel {
  */
 export async function listOllamaModels(baseUrl = "http://localhost:11434"): Promise<OllamaModel[]> {
   try {
-    const url = baseUrl.replace(/\/$/, "") + "/api/tags";
+    const url = `${baseUrl.replace(/\/$/, "")}/api/tags`;
     const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
     if (!res.ok) return [];
     const data = (await res.json()) as { models?: { name: string; size: number }[] };
@@ -243,7 +243,7 @@ export async function isOllamaRunning(baseUrl = "http://localhost:11434"): Promi
 
 async function checkOllamaHealth(baseUrl: string): Promise<boolean> {
   try {
-    const res = await fetch(baseUrl.replace(/\/$/, "") + "/api/tags", {
+    const res = await fetch(`${baseUrl.replace(/\/$/, "")}/api/tags`, {
       signal: AbortSignal.timeout(3000),
     });
     return res.ok || res.status === 200;
