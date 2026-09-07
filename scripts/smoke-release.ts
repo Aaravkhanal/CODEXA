@@ -33,7 +33,7 @@ if (!versionOutput.includes(`codexa ${expectedVersion}`)) {
 }
 
 const helpOutput = await run(["--help"]);
-if (!helpOutput.includes("Usage:") || !helpOutput.includes("API_URL")) {
+if (!helpOutput.includes("Usage:") || !helpOutput.includes("Options:")) {
   throw new Error(`Unexpected help output: ${helpOutput}`);
 }
 
