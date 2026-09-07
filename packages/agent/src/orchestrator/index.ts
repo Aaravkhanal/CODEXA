@@ -146,6 +146,9 @@ export class AgentOrchestrator {
       this.checkpointManager.createCheckpoint(`Pre-task: ${task.slice(0, 40)}`);
 
       const detectedSkills = this.skillManager.detectSkillsForTask(task);
+      const skillInstructions = detectedSkills
+        .map((s) => `[SKILL: ${s.name}]\nDescription: ${s.description}\nRecommended Workflow: ${s.recommendedWorkflow.join(" -> ")}`)
+        .join("\n\n");
       const skillsDetail = detectedSkills.length > 0
         ? `Loaded skills: ${detectedSkills.map((s) => s.name).join(", ")}`
         : "No specific skills matched";
@@ -153,8 +156,10 @@ export class AgentOrchestrator {
       // ── Phase 1: Explorer & Project Knowledge Graph ────────────────────
       emit({ phase: "exploring", message: "Analyzing project structure & Knowledge Graph...", detail: skillsDetail });
       const graph = this.projectIndexer.getOrBuildGraph();
+      const graphContextStr = `Project Name: ${graph.projectName}\nFrameworks: ${graph.frameworks.join(", ") || "none"}\nLanguages: ${graph.languages.join(", ") || "none"}\nPackage Manager: ${graph.packageManager}\nDatabase: ${graph.databaseType || "none"}\nArchitecture Notes: ${graph.architectureNotes.join("; ") || "standard"}`;
+
       const context = await this.contextEngine.buildContext(task);
-      const explorationSummary = await this.runExplorer(task, context);
+      const explorationSummary = await this.runExplorer(task, context, graphContextStr, skillInstructions);
       emit({
         phase: "exploring",
         message: `✓ Project '${graph.projectName}' analyzed (${context.files.length} relevant files)`,
@@ -163,12 +168,23 @@ export class AgentOrchestrator {
 
       // ── Phase 2: Planner ─────────────────────────────────────────────────
       emit({ phase: "planning", message: "Creating implementation plan..." });
-      const plan = await this.runPlanner(task, context, explorationSummary);
+      const plan = await this.runPlanner(task, context, explorationSummary, skillInstructions);
       emit({ phase: "planning", message: "✓ Plan ready", detail: plan });
 
-      // ── Phase 3: Coder ───────────────────────────────────────────────────
+      // ── Phase 3: Coder & Dependency Check ───────────────────────────────
+      emit({ phase: "coding", message: "Verifying project dependencies..." });
+      const packagesToVerify = this.dependencyManager.getInstalledPackages();
+      const depPlan = this.dependencyManager.planDependencies(Array.from(packagesToVerify));
+      if (depPlan.missing.length > 0) {
+        emit({
+          phase: "coding",
+          message: `Installing missing packages: ${depPlan.missing.join(", ")}`,
+        });
+        this.dependencyManager.installMissing(depPlan.missing);
+      }
+
       emit({ phase: "coding", message: "Implementing changes..." });
-      const codingResult = await this.runCoder(task, context, plan);
+      const codingResult = await this.runCoder(task, context, plan, skillInstructions);
       filesModified = codingResult.filesModified;
       emit({
         phase: "coding",
@@ -252,16 +268,29 @@ export class AgentOrchestrator {
 
   // ── Sub-agent implementations ──────────────────────────────────────────
 
-  private async runExplorer(task: string, context: ProjectContext): Promise<string> {
+  private async runExplorer(
+    task: string,
+    context: ProjectContext,
+    graphContextStr: string,
+    skillInstructions: string,
+  ): Promise<string> {
     const fileList = context.files
       .slice(0, 20)
       .map((f) => `  ${f.path} (relevance: ${f.relevanceScore.toFixed(1)})`)
       .join("\n");
 
+    const promptText = [
+      `Task: ${task}`,
+      `Knowledge Graph:\n${graphContextStr}`,
+      skillInstructions ? `Skills Guidelines:\n${skillInstructions}` : "",
+      `Top relevant files:\n${fileList}`,
+      "Provide a concise understanding of the project structure and what files will need to be modified for this task.",
+    ].filter(Boolean).join("\n\n");
+
     const { text, usage } = await (generateText as any)({
       model: this.planModel,
       system: EXPLORER_SYSTEM_PROMPT,
-      prompt: `Task: ${task}\n\nTop relevant files:\n${fileList}\n\nProvide a concise understanding of the project structure and what files will need to be modified for this task.`,
+      prompt: promptText,
     });
     this.totalTokensUsed += (usage?.totalTokens ?? 0);
     return text;
@@ -271,16 +300,25 @@ export class AgentOrchestrator {
     task: string,
     context: ProjectContext,
     explorationSummary: string,
+    skillInstructions: string,
   ): Promise<string> {
     const contextBlock = context.files
       .slice(0, 5)
       .map((f) => `\`\`\`${getFileExtension(f.path)}\n// ${f.path}\n${f.content.slice(0, 2000)}\n\`\`\``)
       .join("\n\n");
 
+    const promptText = [
+      `Task: ${task}`,
+      `Project understanding:\n${explorationSummary}`,
+      skillInstructions ? `Skills Guidelines:\n${skillInstructions}` : "",
+      `Key files:\n${contextBlock}`,
+      "Create a numbered, step-by-step implementation plan.",
+    ].filter(Boolean).join("\n\n");
+
     const { text, usage } = await (generateText as any)({
       model: this.planModel,
       system: PLANNER_SYSTEM_PROMPT,
-      prompt: `Task: ${task}\n\nProject understanding:\n${explorationSummary}\n\nKey files:\n${contextBlock}\n\nCreate a numbered, step-by-step implementation plan.`,
+      prompt: promptText,
     });
     this.totalTokensUsed += (usage?.totalTokens ?? 0);
     return text;
@@ -290,6 +328,7 @@ export class AgentOrchestrator {
     task: string,
     context: ProjectContext,
     plan: string,
+    skillInstructions: string,
   ): Promise<{ filesModified: string[] }> {
     const filesModified: string[] = [];
 
@@ -297,11 +336,18 @@ export class AgentOrchestrator {
       .map((f) => `\`\`\`${getFileExtension(f.path)}\n// FILE: ${f.path}\n${f.content}\n\`\`\``)
       .join("\n\n");
 
+    const promptText = [
+      `Task: ${task}`,
+      `Implementation plan:\n${plan}`,
+      skillInstructions ? `Active Skill Guidelines:\n${skillInstructions}` : "",
+      `Project files:\n${contextBlock}`,
+    ].filter(Boolean).join("\n\n");
+
     await (generateText as any)({
       model: this.model,
       system: CODER_SYSTEM_PROMPT,
       tools: this.tools,
-      prompt: `Task: ${task}\n\nImplementation plan:\n${plan}\n\nProject files:\n${contextBlock}`,
+      prompt: promptText,
       onStepFinish({ toolResults }: any) {
         for (const result of toolResults ?? []) {
           if (

@@ -85,7 +85,7 @@ export class DependencyManager {
     return "npm";
   }
 
-  private getInstalledPackages(): Set<string> {
+  public getInstalledPackages(): Set<string> {
     const installed = new Set<string>();
 
     const pkgPath = join(this.cwd, "package.json");
