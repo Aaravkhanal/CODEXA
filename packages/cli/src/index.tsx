@@ -8,6 +8,10 @@ import { exportSessionTimeline } from "./lib/lens-export";
 import { runSetupWizard } from "./lib/setup-wizard";
 import { runConfigCommand } from "./lib/config-cmd";
 import { runInitCommand } from "./lib/init-cmd";
+import { runSkillCommand } from "./lib/skill-cmd";
+import { runRepoCommand } from "./lib/repo-cmd";
+import { runImportCommand } from "./lib/import-cmd";
+import { runCheckpointCommand } from "./lib/checkpoint-cmd";
 import { isFirstRun, migrateFromLegacyApiKeys } from "./lib/global-config";
 import { execSync } from "node:child_process";
 
@@ -25,20 +29,18 @@ if (args.includes("--help") || args.includes("-h")) {
 
 Usage:
   codexa [options]
-  codexa doctor               Run diagnostic checks on environment, keys, and MCP config
-  codexa config               Interactive AI provider & model configuration
-  codexa config provider      Change AI provider
-  codexa config model         Change model
-  codexa config reset         Reset all configuration
-  codexa init                 Initialize project-specific CODEXA configuration
-  codexa setup                Re-run first-time setup wizard
-  codexa lens export [path]   Export completed session Timeline to standalone HTML report
-  codexa commit               Analyze git status/diff and generate commit
-  codexa review               Review uncommitted git changes for potential bugs
-  codexa scan                 Scan project structure and index CodexaLens graph
-  codexa explain <file>       Explain source code file structure
-  codexa plan "<prompt>"      Create step-by-step implementation plan (PLAN mode)
-  codexa "<prompt>"           Execute task prompt directly in terminal
+  codexa skill [list|install|create|remove]  Manage reusable agent capabilities (Skills)
+  codexa repo [analyze|clone|fork] <url>    Analyze, clone, or fork GitHub repositories
+  codexa import <file|folder>                Import external files/folders into project
+  codexa checkpoints [list|rollback]         Manage pre-task safety checkpoints
+  codexa doctor                              Run diagnostic checks on environment, keys, and MCP config
+  codexa config                              Interactive AI provider & model configuration
+  codexa init                                Initialize project-specific CODEXA configuration
+  codexa setup                               Re-run first-time setup wizard
+  codexa lens export [path]                  Export completed session Timeline to HTML report
+  codexa commit                              Analyze git status/diff and generate commit
+  codexa plan "<prompt>"                     Create step-by-step implementation plan (PLAN mode)
+  codexa "<prompt>"                          Execute task prompt directly in terminal
 
 Options:
   -h, --help               Show this help message
@@ -48,15 +50,7 @@ Options:
   --model <name>           Specify model (e.g. claude-opus-4-6, gpt-4o, gemini-2.5-pro)
   --profile <name>         Use a named configuration profile
   --mode <PLAN|BUILD>      Execution mode (PLAN read-only vs BUILD write mode)
-  --status                 Print project detection information and exit
-
-Environment:
-  API_URL                  Override the CODEXA server API endpoint (cloud mode)
-  ANTHROPIC_API_KEY        Anthropic API key (overrides stored credentials)
-  OPENAI_API_KEY           OpenAI API key (overrides stored credentials)
-  GOOGLE_API_KEY           Google Gemini API key (overrides stored credentials)
-  GROQ_API_KEY             Groq API key (overrides stored credentials)
-  OPENROUTER_API_KEY       OpenRouter API key (overrides stored credentials)`);
+  --status                 Print project detection information and exit`);
   process.exit(0);
 }
 
@@ -68,6 +62,26 @@ try {
 }
 
 // ── Pure-terminal commands (no OpenTUI needed) ────────────────────────────
+
+if (cliArgs.mode === "skill") {
+  await runSkillCommand(cliArgs.subcommand, cliArgs.subArgs);
+  process.exit(0);
+}
+
+if (cliArgs.mode === "repo") {
+  await runRepoCommand(cliArgs.subcommand, cliArgs.subArgs);
+  process.exit(0);
+}
+
+if (cliArgs.mode === "import") {
+  await runImportCommand(cliArgs.targetFile, cliArgs.subArgs);
+  process.exit(0);
+}
+
+if (cliArgs.mode === "checkpoints") {
+  await runCheckpointCommand(cliArgs.subcommand, cliArgs.subArgs);
+  process.exit(0);
+}
 
 if (cliArgs.mode === "lens-export") {
   const outputPath = cliArgs.exportOutputPath || "codexa-timeline-export.html";

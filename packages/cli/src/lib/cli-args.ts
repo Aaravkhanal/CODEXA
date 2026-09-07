@@ -13,6 +13,10 @@ export type CliMode =
   | "scan"
   | "commit"
   | "lens-export"
+  | "skill"
+  | "repo"
+  | "import"
+  | "checkpoints"
   | "task";
 
 export interface ParsedArgs {
@@ -27,6 +31,8 @@ export interface ParsedArgs {
   exportOutputPath?: string;
   /** Sub-command for `codexa config <subcommand>` e.g. "provider", "model", "reset" */
   configSubcommand?: string;
+  subcommand?: string;
+  subArgs?: string[];
 }
 
 export function parseCliArgs(argv: string[] = args): ParsedArgs {
@@ -82,6 +88,54 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
   if (first === "scan") return { mode: "scan", autoApprove, sandbox, model, profile, executionMode };
   if (first === "commit") return { mode: "commit", autoApprove, sandbox, model, profile, executionMode };
   if (first === "init") return { mode: "init", autoApprove, sandbox, model, profile, executionMode };
+  if (first === "skills" || first === "skill") {
+    return {
+      mode: "skill",
+      subcommand: second || "list",
+      subArgs: filteredArgs.slice(2),
+      autoApprove,
+      sandbox,
+      model,
+      profile,
+      executionMode,
+    };
+  }
+  if (first === "repo") {
+    return {
+      mode: "repo",
+      subcommand: second || "analyze",
+      subArgs: filteredArgs.slice(2),
+      autoApprove,
+      sandbox,
+      model,
+      profile,
+      executionMode,
+    };
+  }
+  if (first === "import") {
+    return {
+      mode: "import",
+      targetFile: second,
+      subArgs: filteredArgs.slice(1),
+      autoApprove,
+      sandbox,
+      model,
+      profile,
+      executionMode,
+    };
+  }
+  if (first === "checkpoints" || first === "checkpoint") {
+    return {
+      mode: "checkpoints",
+      subcommand: second || "list",
+      subArgs: filteredArgs.slice(2),
+      autoApprove,
+      sandbox,
+      model,
+      profile,
+      executionMode,
+    };
+  }
   if (first === "config") {
     // `codexa config [provider|model|reset]`
     const configSubcommand = second && ["provider", "model", "reset"].includes(second) ? second : undefined;
@@ -111,3 +165,4 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
 
 export const cliArgs = parseCliArgs();
 export default cliArgs;
+

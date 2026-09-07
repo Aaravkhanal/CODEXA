@@ -22,8 +22,11 @@ import type { ProviderConfig } from "../providers/index.ts";
 import { createLanguageModel } from "../providers/index.ts";
 import type { AgentTools } from "../tools/executor.ts";
 import { createAgentTools } from "../tools/executor.ts";
-
-// ... (rest unchanged until sub-agents) ...
+import { SkillManager } from "../skills/manager.ts";
+import { ProjectIndexer } from "../index/project-indexer.ts";
+import { CheckpointManager } from "../state/checkpoint-manager.ts";
+import { DependencyManager } from "../dependencies/manager.ts";
+import { PermissionEngine } from "../safety/permission-engine.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -93,6 +96,11 @@ export class AgentOrchestrator {
   private readonly planModel: LanguageModel;
   private readonly contextEngine: ContextEngine;
   private readonly tools: AgentTools;
+  private readonly skillManager: SkillManager;
+  private readonly projectIndexer: ProjectIndexer;
+  private readonly checkpointManager: CheckpointManager;
+  private readonly dependencyManager: DependencyManager;
+  private readonly permissionEngine: PermissionEngine;
   private totalTokensUsed = 0;
 
   constructor(options: OrchestratorOptions) {
@@ -114,6 +122,11 @@ export class AgentOrchestrator {
       autoApprove: this.options.autoApprove,
       onConfirmDangerous: this.options.onConfirmDangerous,
     });
+    this.skillManager = new SkillManager(this.options.cwd);
+    this.projectIndexer = new ProjectIndexer(this.options.cwd);
+    this.checkpointManager = new CheckpointManager(this.options.cwd);
+    this.dependencyManager = new DependencyManager(this.options.cwd);
+    this.permissionEngine = new PermissionEngine();
   }
 
   /**
@@ -128,13 +141,23 @@ export class AgentOrchestrator {
     let testsRun = false;
 
     try {
-      // ── Phase 1: Explorer ────────────────────────────────────────────────
-      emit({ phase: "exploring", message: "Exploring project structure..." });
+      // ── Phase 0: Pre-task Checkpoint & Skill Matching ──────────────────
+      emit({ phase: "exploring", message: "Creating safety checkpoint..." });
+      this.checkpointManager.createCheckpoint(`Pre-task: ${task.slice(0, 40)}`);
+
+      const detectedSkills = this.skillManager.detectSkillsForTask(task);
+      const skillsDetail = detectedSkills.length > 0
+        ? `Loaded skills: ${detectedSkills.map((s) => s.name).join(", ")}`
+        : "No specific skills matched";
+
+      // ── Phase 1: Explorer & Project Knowledge Graph ────────────────────
+      emit({ phase: "exploring", message: "Analyzing project structure & Knowledge Graph...", detail: skillsDetail });
+      const graph = this.projectIndexer.getOrBuildGraph();
       const context = await this.contextEngine.buildContext(task);
       const explorationSummary = await this.runExplorer(task, context);
       emit({
         phase: "exploring",
-        message: `✓ Project understood (${context.files.length} relevant files)`,
+        message: `✓ Project '${graph.projectName}' analyzed (${context.files.length} relevant files)`,
         detail: explorationSummary,
       });
 

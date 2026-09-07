@@ -72,3 +72,14 @@ export {
   type SemanticSearchResult,
 } from "./local-semantic-index";
 
+export type {
+  SkillManifest,
+  ProjectKnowledgeGraph,
+  RepositoryAnalysis,
+  DependencyPlan,
+  RiskLevel,
+  PermissionCheckResult,
+  CheckpointMetadata,
+  TaskState,
+} from "./skills";
+
