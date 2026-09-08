@@ -189,7 +189,7 @@ export function Home() {
         >
           <box flexDirection="row" justifyContent="space-between" alignItems="center">
             <text fg={colors.primary} attributes={TextAttributes.BOLD}>
-              ⚡ AGENT &amp; AI MODEL CONFIGURATION
+              ⚡ AGENT & AI MODEL CONFIGURATION
             </text>
             {keyConfigured ? (
               <text fg={colors.success}>✓ API Key Active ({provider.toUpperCase()})</text>

@@ -5,6 +5,7 @@ import { setApiKey, hasApiKey } from "../../lib/api-keys";
 import type { SupportedChatModelId, SupportedProvider } from "@codexa/shared";
 import { useTheme } from "../../providers/theme";
 import { usePromptConfig } from "../../providers/prompt-config";
+import { getProviderForModel } from "../../lib/model-utils";
 
 const PROVIDERS: { id: SupportedProvider; label: string; placeholder: string }[] = [
   { id: "anthropic", label: "Anthropic  (claude-*)", placeholder: "sk-ant-api..." },
@@ -33,11 +34,7 @@ export function AddApiKeyDialogContent({
 
   const defaultProvider =
     initialProvider ??
-    (initialModelId?.startsWith("claude")
-      ? "anthropic"
-      : initialModelId
-        ? "openai"
-        : null);
+    (initialModelId ? getProviderForModel(initialModelId) : null);
 
   const [step, setStep] = useState<"select-provider" | "enter-key">(
     defaultProvider ? "enter-key" : "select-provider"
