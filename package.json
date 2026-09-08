@@ -8,10 +8,11 @@
     "packages/*"
   ],
   "scripts": {
+    "start": "bun run packages/cli/src/index.tsx",
     "dev:server": "bun run --hot  packages/server/src/index.ts",
     "dev:cli": "bun run --watch packages/cli/src/index.tsx",
     "dev:web": "bun run --cwd packages/web dev",
-    "build:cli": "bun run --filter @codexa/cli build",
+    "build:cli": "bun run --cwd packages/cli build",
     "build:web": "bun run --cwd packages/web build",
     "db:generate": "bun run --cwd packages/database db:generate",
     "db:push": "bun run --cwd packages/database db:push",

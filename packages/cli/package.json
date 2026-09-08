@@ -30,7 +30,7 @@
   },
   "scripts": {
     "dev": "bun run --watch src/index.tsx",
-    "build": "bun build src/index.tsx --outdir dist --target bun --packages external",
+    "build": "bun build src/index.tsx --outdir dist --target bun",
     "postinstall": "node scripts/postinstall.cjs"
   },
   "files": [
