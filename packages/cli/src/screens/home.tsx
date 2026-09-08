@@ -8,11 +8,14 @@ import { hasApiKey } from "../lib/api-keys";
 import { useDialog } from "../providers/dialog";
 import { AddApiKeyDialogContent } from "../components/dialogs/add-api-key-dialog";
 import { ModelsDialogContent } from "../components/dialogs/models-dialog";
+import { MemoryDialogContent } from "../components/dialogs/memory-dialog";
 import { SUPPORTED_CHAT_MODELS } from "@codexa/shared";
 import { useTheme } from "../providers/theme";
 import { detectProject } from "../lib/project-detector";
+import { addRecentProject } from "../lib/recent-projects";
 import { cliArgs } from "../lib/cli-args";
 import { getProviderForModel } from "../lib/model-utils";
+import { ProjectMemoryManager } from "@codexa/agent";
 
 export function Home() {
   const navigate = useNavigate();
@@ -23,7 +26,16 @@ export function Home() {
   const provider = getProviderForModel(model);
   const keyConfigured = hasApiKey(provider);
 
-  const projectInfo = useMemo(() => detectProject(), []);
+  const projectInfo = useMemo(() => {
+    const info = detectProject();
+    try {
+      addRecentProject(info.path);
+    } catch {}
+    return info;
+  }, []);
+
+  const memoryManager = useMemo(() => new ProjectMemoryManager(process.cwd()), []);
+  const resumeInfo = useMemo(() => memoryManager.getResumeInfo(), [memoryManager]);
 
   const openAgentSetup = useCallback(() => {
     dialog.open({
@@ -48,6 +60,13 @@ export function Home() {
       ),
     });
   }, [dialog, setModel]);
+
+  const openMemoryDialog = useCallback(() => {
+    dialog.open({
+      title: "Project Memory (.codexa/memory.md)",
+      children: <MemoryDialogContent />,
+    });
+  }, [dialog]);
 
   useEffect(() => {
     if (cliArgs.mode === "setup") {
@@ -151,6 +170,17 @@ export function Home() {
             <text attributes={TextAttributes.DIM}>{projectInfo.path}</text>
           </box>
 
+          {projectInfo.isSystemOrHomeDir && (
+            <box flexDirection="column" backgroundColor="yellow" paddingX={1}>
+              <text fg="black" attributes={TextAttributes.BOLD}>
+                ⚠ NOTICE: CodeXA was started in your Home or Root directory.
+              </text>
+              <text fg="black">
+                Make sure you are in the intended project directory before executing commands.
+              </text>
+            </box>
+          )}
+
           <box flexDirection="row" gap={2} marginTop={1}>
             <text fg="white">Detected:</text>
             {projectInfo.frameworks.map((fw) => (
@@ -159,7 +189,11 @@ export function Home() {
             {projectInfo.languages.map((lang) => (
               <text key={lang} fg="yellow">✓ {lang}</text>
             ))}
-            {projectInfo.hasGit && <text fg="green">✓ Git repository</text>}
+            {projectInfo.hasGit && (
+              <text fg="green">
+                ✓ Git {projectInfo.gitBranch ? `(${projectInfo.gitBranch})` : ""}
+              </text>
+            )}
           </box>
 
           <box flexDirection="row" gap={2}>
@@ -176,6 +210,24 @@ export function Home() {
               {projectInfo.gitStatus}
             </text>
           </box>
+
+          {/* Resume previous session memory banner if exists */}
+          {resumeInfo.hasMemory && resumeInfo.lastSummary && (
+            <box
+              flexDirection="column"
+              backgroundColor={colors.surface}
+              paddingX={1}
+              paddingY={1}
+              marginTop={1}
+            >
+              <text fg={colors.primary} attributes={TextAttributes.BOLD}>
+                🧠 Previous Session Memory Found:
+              </text>
+              <text fg="white" attributes={TextAttributes.DIM}>
+                {resumeInfo.lastSummary}
+              </text>
+            </box>
+          )}
         </box>
 
         {/* Model Setup config card */}
@@ -189,7 +241,7 @@ export function Home() {
         >
           <box flexDirection="row" justifyContent="space-between" alignItems="center">
             <text fg={colors.primary} attributes={TextAttributes.BOLD}>
-              ⚡ AGENT & AI MODEL CONFIGURATION
+              ⚡ AGENT &amp; AI MODEL CONFIGURATION
             </text>
             {keyConfigured ? (
               <text fg={colors.success}>✓ API Key Active ({provider.toUpperCase()})</text>
@@ -221,6 +273,13 @@ export function Home() {
             >
               <text fg="black" attributes={TextAttributes.BOLD}>🤖 Switch Agent Model</text>
             </box>
+            <box
+              onMouseDown={openMemoryDialog}
+              backgroundColor={colors.selection}
+              paddingX={1}
+            >
+              <text fg="black" attributes={TextAttributes.BOLD}>🧠 Memory</text>
+            </box>
           </box>
         </box>
 
@@ -233,3 +292,4 @@ export function Home() {
     </box>
   );
 }
+

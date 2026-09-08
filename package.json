@@ -8,6 +8,8 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "bun run --watch packages/cli/src/index.tsx",
+    "build": "bun run build:cli",
     "start": "bun run packages/cli/src/index.tsx",
     "dev:server": "bun run --hot  packages/server/src/index.ts",
     "dev:cli": "bun run --watch packages/cli/src/index.tsx",

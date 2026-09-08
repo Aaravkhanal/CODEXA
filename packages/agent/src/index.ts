@@ -22,4 +22,5 @@ export * from "./repo/repo-analyzer.ts";
 export * from "./dependencies/manager.ts";
 export * from "./safety/permission-engine.ts";
 export * from "./state/checkpoint-manager.ts";
+export * from "./memory/project-memory.ts";
 

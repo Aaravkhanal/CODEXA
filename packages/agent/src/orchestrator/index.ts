@@ -27,6 +27,7 @@ import { ProjectIndexer } from "../index/project-indexer.ts";
 import { CheckpointManager } from "../state/checkpoint-manager.ts";
 import { DependencyManager } from "../dependencies/manager.ts";
 import { PermissionEngine } from "../safety/permission-engine.ts";
+import { ProjectMemoryManager } from "../memory/project-memory.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -101,6 +102,7 @@ export class AgentOrchestrator {
   private readonly checkpointManager: CheckpointManager;
   private readonly dependencyManager: DependencyManager;
   private readonly permissionEngine: PermissionEngine;
+  private readonly memoryManager: ProjectMemoryManager;
   private totalTokensUsed = 0;
 
   constructor(options: OrchestratorOptions) {
@@ -127,6 +129,7 @@ export class AgentOrchestrator {
     this.checkpointManager = new CheckpointManager(this.options.cwd);
     this.dependencyManager = new DependencyManager(this.options.cwd);
     this.permissionEngine = new PermissionEngine();
+    this.memoryManager = new ProjectMemoryManager(this.options.cwd);
   }
 
   /**
@@ -156,7 +159,8 @@ export class AgentOrchestrator {
       // ── Phase 1: Explorer & Project Knowledge Graph ────────────────────
       emit({ phase: "exploring", message: "Analyzing project structure & Knowledge Graph...", detail: skillsDetail });
       const graph = this.projectIndexer.getOrBuildGraph();
-      const graphContextStr = `Project Name: ${graph.projectName}\nFrameworks: ${graph.frameworks.join(", ") || "none"}\nLanguages: ${graph.languages.join(", ") || "none"}\nPackage Manager: ${graph.packageManager}\nDatabase: ${graph.databaseType || "none"}\nArchitecture Notes: ${graph.architectureNotes.join("; ") || "standard"}`;
+      const projectMemory = this.memoryManager.getOrInitMemory(graph);
+      const graphContextStr = `Project Name: ${graph.projectName}\nFrameworks: ${graph.frameworks.join(", ") || "none"}\nLanguages: ${graph.languages.join(", ") || "none"}\nPackage Manager: ${graph.packageManager}\nDatabase: ${graph.databaseType || "none"}\nArchitecture Notes: ${graph.architectureNotes.join("; ") || "standard"}\n\nProject Memory:\n${projectMemory.slice(0, 3000)}`;
 
       const context = await this.contextEngine.buildContext(task);
       const explorationSummary = await this.runExplorer(task, context, graphContextStr, skillInstructions);
@@ -237,6 +241,19 @@ export class AgentOrchestrator {
       const reviewSummary = await this.runReviewer(task, filesModified);
       emit({ phase: "reviewing", message: "✓ Review complete", detail: reviewSummary });
 
+      // Record incremental session summary in project memory
+      try {
+        this.memoryManager.recordSessionSummary({
+          sessionId: `session_${Date.now()}`,
+          timestamp: Date.now(),
+          task,
+          summary: reviewSummary || "Task completed successfully",
+          filesModified,
+          testsRun,
+          testsPassed,
+        });
+      } catch {}
+
       // ── Done ─────────────────────────────────────────────────────────────
       emit({ phase: "done", message: "Task completed successfully" });
 
@@ -253,6 +270,19 @@ export class AgentOrchestrator {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       emit({ phase: "failed", message: `Task failed: ${message}` });
+
+      try {
+        this.memoryManager.recordSessionSummary({
+          sessionId: `session_${Date.now()}`,
+          timestamp: Date.now(),
+          task,
+          summary: `Task stopped with error: ${message}`,
+          filesModified,
+          testsRun,
+          testsPassed: false,
+        });
+      } catch {}
+
       return {
         success: false,
         summary: message,

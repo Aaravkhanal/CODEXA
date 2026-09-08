@@ -5,7 +5,7 @@
  * enforcing confirmation guardrails for high-risk operations.
  */
 
-import type { PermissionCheckResult, RiskLevel } from "@codexa/shared";
+import type { PermissionCheckResult } from "@codexa/shared";
 
 const HIGH_RISK_PATTERNS = [
   /rm\s+-rf?\s/i,

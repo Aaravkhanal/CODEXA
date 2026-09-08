@@ -20,6 +20,9 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createGroq } from "@ai-sdk/groq";
 import type { LanguageModel } from "ai";
+import { createMockModel, type MockModelOptions } from "./mock.ts";
+
+export * from "./mock.ts";
 
 // ---------------------------------------------------------------------------
 // Provider config types
@@ -32,7 +35,8 @@ export type ProviderName =
   | "groq"
   | "ollama"
   | "openrouter"
-  | "custom";
+  | "custom"
+  | "mock";
 
 export interface AnthropicProviderConfig {
   provider: "anthropic";
@@ -82,6 +86,13 @@ export interface CustomProviderConfig {
   name?: string;
 }
 
+export interface MockProviderConfig {
+  provider: "mock";
+  model?: string;
+  apiKey?: string;
+  responseGenerator?: MockModelOptions["responseGenerator"];
+}
+
 export type ProviderConfig =
   | AnthropicProviderConfig
   | OpenAIProviderConfig
@@ -89,7 +100,8 @@ export type ProviderConfig =
   | GroqProviderConfig
   | OllamaProviderConfig
   | OpenRouterProviderConfig
-  | CustomProviderConfig;
+  | CustomProviderConfig
+  | MockProviderConfig;
 
 // ---------------------------------------------------------------------------
 // Curated model lists per provider (shown in the setup wizard)
@@ -114,6 +126,7 @@ export const PROVIDER_MODELS: Record<ProviderName, string[]> = {
   ollama: [], // populated dynamically at runtime
   openrouter: [], // populated dynamically (or user-entered)
   custom: [], // user-specified
+  mock: ["mock-coding-model", "mock-fast-model"],
 };
 
 export const PROVIDER_DISPLAY_NAMES: Record<ProviderName, string> = {
@@ -124,6 +137,7 @@ export const PROVIDER_DISPLAY_NAMES: Record<ProviderName, string> = {
   ollama: "Ollama (local, no API key)",
   openrouter: "OpenRouter",
   custom: "Custom / OpenAI-compatible API",
+  mock: "Mock Provider (Offline Testing)",
 };
 
 export const PROVIDERS_REQUIRING_KEY: ProviderName[] = [
@@ -135,7 +149,7 @@ export const PROVIDERS_REQUIRING_KEY: ProviderName[] = [
   "custom",
 ];
 
-export const PROVIDERS_WITHOUT_KEY: ProviderName[] = ["ollama"];
+export const PROVIDERS_WITHOUT_KEY: ProviderName[] = ["ollama", "mock"];
 
 // ---------------------------------------------------------------------------
 // Model factory
@@ -149,6 +163,13 @@ export const PROVIDERS_WITHOUT_KEY: ProviderName[] = ["ollama"];
  */
 export function createLanguageModel(config: ProviderConfig): LanguageModel {
   switch (config.provider) {
+    case "mock": {
+      return createMockModel({
+        modelId: config.model ?? "mock-coding-model",
+        responseGenerator: config.responseGenerator,
+      }) as any;
+    }
+
     case "anthropic": {
       const client = createAnthropic({ apiKey: config.apiKey });
       // Map friendly IDs to SDK IDs

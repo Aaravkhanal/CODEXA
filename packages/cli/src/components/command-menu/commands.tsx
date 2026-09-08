@@ -7,6 +7,7 @@ import {
   McpDialogContent,
   CodexaLensDialogContent,
   GitDialogContent,
+  MemoryDialogContent,
 } from "../dialogs";
 import { AddApiKeyDialogContent } from "../dialogs/add-api-key-dialog";
 import { SUPPORTED_CHAT_MODELS } from "@codexa/shared";
@@ -16,24 +17,40 @@ import { openBillingPortal, openUpgradeCheckout } from "../../lib/upgrade";
 import { detectProject } from "../../lib/project-detector";
 import { undoLastSnapshotSet } from "../../lib/snapshot-manager";
 import { apiClient } from "../../lib/api-client";
+import { ProjectMemoryManager } from "@codexa/agent";
 
 export const COMMANDS: Command[] = [
+  {
+    name: "help",
+    description: "Show available commands, tools, and usage guide",
+    value: "/help",
+    action: (ctx) => {
+      ctx.toast.show({
+        message: "CodeXA Commands: /model, /models, /memory, /context, /diff, /undo, /sessions, /config, /exit",
+      });
+    },
+  },
   {
     name: "new",
     description: "Start a new conversation",
     value: "/new",
     action: (ctx) => {
       ctx.navigate("/");
-    }
+    },
   },
   {
-    name: "agents",
-    description: "Switch agents",
-    value: "/agents",
+    name: "model",
+    description: "Select AI model for generation",
+    value: "/model",
     action: (ctx) => {
       ctx.dialog.open({
-        title: "Select Agent",
-        children: <AgentsDialogContent currentMode={ctx.mode} onSelectMode={ctx.setMode} />,
+        title: "Select Model",
+        children: (
+          <ModelsDialogContent
+            models={SUPPORTED_CHAT_MODELS.map((model) => model.id)}
+            onSelectModel={ctx.setModel}
+          />
+        ),
       });
     },
   },
@@ -54,6 +71,39 @@ export const COMMANDS: Command[] = [
     },
   },
   {
+    name: "memory",
+    description: "Inspect, import, or export project memory (.codexa/memory.md)",
+    value: "/memory",
+    action: (ctx) => {
+      ctx.dialog.open({
+        title: "Project Memory Manager",
+        children: <MemoryDialogContent />,
+      });
+    },
+  },
+  {
+    name: "context",
+    description: "Display project context and detected architecture",
+    value: "/context",
+    action: (ctx) => {
+      const info = detectProject();
+      ctx.toast.show({
+        message: `Project: ${info.name} | Langs: ${info.languages.join(", ") || "None"} | Frameworks: ${info.frameworks.join(", ") || "None"} | Files: ${info.fileCount}`,
+      });
+    },
+  },
+  {
+    name: "session",
+    description: "Browse past sessions",
+    value: "/session",
+    action: (ctx) => {
+      ctx.dialog.open({
+        title: "Sessions",
+        children: <SessionsDialogContent />,
+      });
+    },
+  },
+  {
     name: "sessions",
     description: "Browse past sessions",
     value: "/sessions",
@@ -61,6 +111,17 @@ export const COMMANDS: Command[] = [
       ctx.dialog.open({
         title: "Sessions",
         children: <SessionsDialogContent />,
+      });
+    },
+  },
+  {
+    name: "config",
+    description: "Configure AI providers, models, and keys",
+    value: "/config",
+    action: (ctx) => {
+      ctx.dialog.open({
+        title: "Configure AI Model & API Key",
+        children: <AddApiKeyDialogContent />,
       });
     },
   },

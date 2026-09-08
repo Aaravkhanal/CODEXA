@@ -6,3 +6,4 @@ export { McpDialogContent } from "./mcp-dialog";
 export { CodexaLensDialogContent } from "./codexalens-dialog";
 export { ConfirmToolDialogContent } from "./confirm-tool-dialog";
 export { GitDialogContent } from "./git-dialog";
+export { MemoryDialogContent } from "./memory-dialog";

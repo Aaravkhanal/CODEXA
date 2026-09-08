@@ -97,14 +97,16 @@ Select your AI provider:
 - **🤖 Multi-Agent Orchestration**: Specialized sub-agent pipeline (Explorer → Planner → Coder → Tester → Debugger → Reviewer) to handle complex software tasks end-to-end.
 - **⚡ Local-First Execution**: Runs tools directly on your machine without requiring external cloud backend servers or active subscriptions.
 - **⚙️ Profile Management**: Switch profiles on the fly (`codexa --profile cheap`, `codexa --profile local`).
-- **📁 Project Instructions (`codexa init`)**: Create `.codexa/instructions.md` and `.codexa/architecture.md` in any repo to teach CODEXA project conventions.
+- **📁 Project Memory (`.codexa/`)**: Persistent `.codexa/memory.md` capturing project purpose, architecture, decisions, and automatic session summaries across visits.
 - **🔒 Hardened Opt-in Docker Sandbox**: Run BUILD-mode shell execution safely (`--sandbox` / `CODEXA_SANDBOX=true`).
 - **🔍 CodexaLens Code Intelligence**: Built-in AST dependency graph, local TF-IDF code search, active context timeline recorder, and token/credit usage tracking.
+- **🧪 Zero-Credit Mock Provider**: Full agent loop testing offline without consuming API credits (`provider: "mock"`).
 
 ---
 
 ## 📑 Command Reference
 
+### CLI Terminal Commands
 | Command | Purpose |
 | --- | --- |
 | `codexa` | Launch interactive TUI agent session |
@@ -119,6 +121,20 @@ Select your AI provider:
 | `codexa status` | Output project language/framework detection status |
 | `codexa review` | Review uncommitted git changes for potential bugs |
 | `codexa commit` | Stage changes and generate a structured git commit message |
+
+### Interactive Slash Commands (Inside Session)
+| Slash Command | Purpose |
+| --- | --- |
+| `/help` | Show available commands and tool usage guide |
+| `/model` / `/models` | Switch active AI model on the fly |
+| `/memory` | Inspect, import, or export project memory (`.codexa/memory.md`) |
+| `/context` | Display detected project context, frameworks, and languages |
+| `/diff` | Inspect Git diff of modifications made by CodeXA |
+| `/undo` | Rollback last modified file changes |
+| `/sessions` | Browse past conversations and resume work |
+| `/config` | Update AI provider API keys |
+| `/clear` | Clear message history |
+| `/exit` | Gracefully quit session |
 
 ---
 
