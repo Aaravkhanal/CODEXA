@@ -29,21 +29,21 @@ const percentFloat = z
 export const serverEnvSchema = z.object({
   // ---- Database -----------------------------------------------------------
   /** Postgres connection string, e.g. postgresql://user:pass@host:5432/db */
-  DATABASE_URL: url,
+  DATABASE_URL: url.optional(),
 
   // ---- Clerk auth ---------------------------------------------------------
   /** Clerk publishable key (pk_live_… or pk_test_…) */
-  CLERK_PUBLISHABLE_KEY: nonEmptyString,
+  CLERK_PUBLISHABLE_KEY: optionalString,
   /** Clerk secret key (sk_live_… or sk_test_…) */
-  CLERK_SECRET_KEY: nonEmptyString,
+  CLERK_SECRET_KEY: optionalString,
   /** Clerk frontend API host, e.g. clerk.yourdomain.com */
-  CLERK_FRONTEND_API: nonEmptyString,
+  CLERK_FRONTEND_API: optionalString,
   /** Clerk OAuth client ID for the CODEXA application */
-  CLERK_OAUTH_CLIENT_ID: nonEmptyString,
+  CLERK_OAUTH_CLIENT_ID: optionalString,
   /** Clerk OAuth client secret (optional in some Clerk configurations) */
   CLERK_OAUTH_CLIENT_SECRET: optionalString,
   /** HS256 secret used to sign internal JWT tokens */
-  JWT_SECRET: nonEmptyString,
+  JWT_SECRET: z.string().optional().default("dev-jwt-secret"),
 
   // ---- AI providers (at least one required) --------------------------------
   /** Anthropic API key for Claude models */
@@ -53,11 +53,11 @@ export const serverEnvSchema = z.object({
 
   // ---- Polar billing -------------------------------------------------------
   /** Polar access token for the billing integration */
-  POLAR_ACCESS_TOKEN: nonEmptyString,
+  POLAR_ACCESS_TOKEN: optionalString,
   /** Polar product ID linked to CODEXA subscriptions */
-  POLAR_PRODUCT_ID: nonEmptyString,
+  POLAR_PRODUCT_ID: optionalString,
   /** Polar credit meter ID used for usage tracking */
-  POLAR_CREDITS_METER_ID: nonEmptyString,
+  POLAR_CREDITS_METER_ID: optionalString,
   /**
    * Polar server environment: "sandbox" for development, "production" for live.
    * @default "sandbox"
@@ -107,12 +107,31 @@ export function validateEnv(env: NodeJS.ProcessEnv = process.env): ServerEnv {
   }
 
   const parsed = result.data;
+  const isLocalDev = !parsed.CLERK_SECRET_KEY && !parsed.CLERK_PUBLISHABLE_KEY;
+
+  if (isLocalDev) {
+    console.warn(
+      "[CODEXA] Local dev mode: Clerk keys not set — auth is bypassed (all requests use 'local-dev-user').",
+    );
+  }
+
+  if (!parsed.DATABASE_URL) {
+    console.warn(
+      "[CODEXA] DATABASE_URL not set — session persistence is disabled. Sessions will use in-memory storage.",
+    );
+  }
+
+  if (!parsed.POLAR_ACCESS_TOKEN) {
+    console.warn(
+      "[CODEXA] Polar billing not configured — billing endpoints are disabled.",
+    );
+  }
 
   // Soft check: at least one AI provider must be configured.
   if (!parsed.ANTHROPIC_API_KEY && !parsed.OPENAI_API_KEY) {
     console.warn(
       "[CODEXA] Warning: neither ANTHROPIC_API_KEY nor OPENAI_API_KEY is set. " +
-        "Chat endpoints will not function until at least one provider key is configured.",
+        "The server will use keys sent from the CLI via X-Anthropic-Key / X-OpenAI-Key headers.",
     );
   }
 

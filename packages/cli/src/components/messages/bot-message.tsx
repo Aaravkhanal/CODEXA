@@ -97,9 +97,10 @@ export function BotMessage({
                   width="100%"
                   paddingX={2}
                 >
-                  <text attributes={TextAttributes.DIM}>
-                    <em fg={colors.thinking}>Thinking:</em> {part.text}
-                  </text>
+                  <box flexDirection="row" gap={1} width="100%">
+                    <text attributes={TextAttributes.DIM} fg={colors.thinking}>Thinking:</text>
+                    <text attributes={TextAttributes.DIM}>{part.text}</text>
+                  </box>
                 </box>
               );
             }

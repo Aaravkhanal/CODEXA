@@ -120,7 +120,31 @@ export function saveGlobalConfig(config: GlobalConfig): void {
 }
 
 export function isFirstRun(): boolean {
-  return getGlobalConfig() === null;
+  // Already configured via new config system
+  if (getGlobalConfig() !== null) return false;
+
+  // Check legacy api-keys.json — if any provider key exists, skip wizard
+  try {
+    const legacyFile = join(CODEXA_DIR, "api-keys.json");
+    if (existsSync(legacyFile)) {
+      const legacy = JSON.parse(readFileSync(legacyFile, "utf-8")) as Record<string, string>;
+      if (Object.values(legacy).some(Boolean)) return false;
+    }
+  } catch {
+    // ignore read errors
+  }
+
+  // Check environment variables — if any AI key is set, treat as configured
+  const envProviders = [
+    process.env.ANTHROPIC_API_KEY,
+    process.env.OPENAI_API_KEY,
+    process.env.GOOGLE_API_KEY,
+    process.env.GEMINI_API_KEY,
+    process.env.GROQ_API_KEY,
+  ];
+  if (envProviders.some(Boolean)) return false;
+
+  return true;
 }
 
 // ---------------------------------------------------------------------------

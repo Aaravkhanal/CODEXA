@@ -264,21 +264,21 @@ export function Home() {
               backgroundColor={colors.selection}
               paddingX={1}
             >
-              <text fg="black" attributes={TextAttributes.BOLD}>🔑 Configure API Key</text>
+              <text fg="black" attributes={TextAttributes.BOLD}>🔑 Configure Key (/apikey)</text>
             </box>
             <box
               onMouseDown={openModelSelector}
               backgroundColor={colors.selection}
               paddingX={1}
             >
-              <text fg="black" attributes={TextAttributes.BOLD}>🤖 Switch Agent Model</text>
+              <text fg="black" attributes={TextAttributes.BOLD}>🤖 Switch Model (/model)</text>
             </box>
             <box
               onMouseDown={openMemoryDialog}
               backgroundColor={colors.selection}
               paddingX={1}
             >
-              <text fg="black" attributes={TextAttributes.BOLD}>🧠 Memory</text>
+              <text fg="black" attributes={TextAttributes.BOLD}>🧠 Memory (/memory)</text>
             </box>
           </box>
         </box>
