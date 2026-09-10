@@ -25,7 +25,7 @@ for (const file of files) {
       modified = true;
     }
 
-    // 3. Fallback unknown component types to SpanRenderable / BoxRenderable instead of throwing
+    // 3. Fallback unknown component types to TextRenderable / BoxRenderable instead of throwing
     if (content.includes('throw new Error(`Unknown component type: ${type}`);')) {
       content = content.replace(
         `if (!components[type]) {\n      throw new Error(\`Unknown component type: \${type}\`);\n    }\n    return new components[type](rootContainerInstance.ctx, {\n      id,\n      ...props\n    });`,
@@ -34,11 +34,11 @@ for (const file of files) {
       modified = true;
     }
 
-    // 4. Register HTML & Markdown tags in baseComponents
-    if (content.includes('a: LinkRenderable') && !content.includes('h2: BoldSpanRenderable')) {
+    // 4. Register HTML & Markdown tags in baseComponents mapped to top-level Renderable components
+    if (content.includes('a: LinkRenderable') && !content.includes('h2: TextRenderable')) {
       content = content.replace(
-        'a: LinkRenderable',
-        `a: LinkRenderable,\n  h1: BoldSpanRenderable,\n  h2: BoldSpanRenderable,\n  h3: BoldSpanRenderable,\n  h4: BoldSpanRenderable,\n  h5: BoldSpanRenderable,\n  h6: BoldSpanRenderable,\n  p: SpanRenderable,\n  div: BoxRenderable,\n  li: SpanRenderable,\n  ul: BoxRenderable,\n  ol: BoxRenderable,\n  pre: CodeRenderable,\n  blockquote: SpanRenderable,\n  hr: LineBreakRenderable,\n  table: BoxRenderable,\n  thead: BoxRenderable,\n  tbody: BoxRenderable,\n  tr: BoxRenderable,\n  th: BoldSpanRenderable,\n  td: SpanRenderable`
+        /a:\s*LinkRenderable,[\s\S]*?\};/m,
+        `a: LinkRenderable,\n  h1: TextRenderable,\n  h2: TextRenderable,\n  h3: TextRenderable,\n  h4: TextRenderable,\n  h5: TextRenderable,\n  h6: TextRenderable,\n  p: TextRenderable,\n  div: BoxRenderable,\n  li: TextRenderable,\n  ul: BoxRenderable,\n  ol: BoxRenderable,\n  pre: CodeRenderable,\n  blockquote: TextRenderable,\n  hr: BoxRenderable,\n  table: BoxRenderable,\n  thead: BoxRenderable,\n  tbody: BoxRenderable,\n  tr: BoxRenderable,\n  th: TextRenderable,\n  td: TextRenderable\n};`
       );
       modified = true;
     }
