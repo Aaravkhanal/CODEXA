@@ -25,11 +25,30 @@ for (const file of files) {
       modified = true;
     }
 
-    // 3. Fallback unknown component types to TextRenderable / BoxRenderable instead of throwing
-    if (content.includes('throw new Error(`Unknown component type: ${type}`);')) {
+    // 3. Robust createInstance with getLayoutNode fallback and textNodeKeys handling
+    if (!content.includes('typeof instance.getLayoutNode !== "function"')) {
       content = content.replace(
-        `if (!components[type]) {\n      throw new Error(\`Unknown component type: \${type}\`);\n    }\n    return new components[type](rootContainerInstance.ctx, {\n      id,\n      ...props\n    });`,
-        `const ComponentClass = components[type] || (hostContext?.isInsideText ? SpanRenderable : BoxRenderable);\n    return new ComponentClass(rootContainerInstance.ctx, {\n      id,\n      ...props\n    });`
+        /createInstance\(type,\s*props,\s*rootContainerInstance,\s*hostContext\)\s*\{[\s\S]*?return new (?:components\[type\]|ComponentClass)\([\s\S]*?\};\s*\}/,
+        `createInstance(type, props, rootContainerInstance, hostContext) {
+    const id = getNextId(type);
+    const components = getComponentCatalogue();
+    let ComponentClass = components[type];
+    if (!ComponentClass) {
+      ComponentClass = hostContext?.isInsideText ? SpanRenderable : BoxRenderable;
+    } else if (!hostContext?.isInsideText && textNodeKeys.includes(type)) {
+      ComponentClass = TextRenderable;
+    }
+    const instance = new ComponentClass(rootContainerInstance.ctx, {
+      id,
+      ...props
+    });
+    if (typeof instance.getLayoutNode !== "function") {
+      instance.getLayoutNode = function() {
+        return instance.layoutNode || (rootContainerInstance.ctx && typeof rootContainerInstance.ctx.createNode === "function" ? rootContainerInstance.ctx.createNode() : null);
+      };
+    }
+    return instance;
+  }`
       );
       modified = true;
     }
