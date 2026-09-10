@@ -1,13 +1,14 @@
 import { readFileSync, writeFileSync, globSync } from "node:fs";
 
-const files = globSync("node_modules/**/chunk-rm53pqj2.js");
+// ── 1. Patch @opentui/react ──────────────────────────────────────────────
+const reactFiles = globSync("node_modules/**/@opentui/react/**/chunk-rm53pqj2.js");
 
-for (const file of files) {
+for (const file of reactFiles) {
   try {
     let content = readFileSync(file, "utf-8");
     let modified = false;
 
-    // 1. Remove strict text node throw in createTextInstance
+    // Remove strict text node throw in createTextInstance
     if (content.includes('throw new Error("Text must be created inside of a text node");')) {
       content = content.replace(
         /if\s*\(!hostContext\.isInsideText\)\s*\{\s*throw\s+new\s+Error\("Text must be created inside of a text node"\);\s*\}/g,
@@ -16,7 +17,7 @@ for (const file of files) {
       modified = true;
     }
 
-    // 2. Remove strict textNodeKeys throw in createInstance
+    // Remove strict textNodeKeys throw in createInstance
     if (content.includes('must be created inside of a text node')) {
       content = content.replace(
         /if\s*\(textNodeKeys\.includes\(type\)\s*&&\s*!hostContext\.isInsideText\)\s*\{\s*throw\s+new\s+Error\([^)]+\);\s*\}/g,
@@ -25,7 +26,7 @@ for (const file of files) {
       modified = true;
     }
 
-    // 3. Robust createInstance with getLayoutNode fallback and textNodeKeys handling
+    // Robust createInstance with getLayoutNode fallback and textNodeKeys handling
     if (!content.includes('typeof instance.getLayoutNode !== "function"')) {
       content = content.replace(
         /createInstance\(type,\s*props,\s*rootContainerInstance,\s*hostContext\)\s*\{[\s\S]*?return new (?:components\[type\]|ComponentClass)\([\s\S]*?\};\s*\}/,
@@ -53,7 +54,7 @@ for (const file of files) {
       modified = true;
     }
 
-    // 4. Register HTML & Markdown tags in baseComponents mapped to top-level Renderable components
+    // Register HTML & Markdown tags in baseComponents
     if (content.includes('a: LinkRenderable') && !content.includes('h2: TextRenderable')) {
       content = content.replace(
         /a:\s*LinkRenderable,[\s\S]*?\};/m,
@@ -64,7 +65,41 @@ for (const file of files) {
 
     if (modified) {
       writeFileSync(file, content, "utf-8");
-      console.log(`[patch-opentui] Patched ${file} successfully.`);
+      console.log(`[patch-opentui] Patched @opentui/react in ${file}`);
+    }
+  } catch (err: any) {
+    console.warn(`[patch-opentui] Warning patching ${file}:`, err.message);
+  }
+}
+
+// ── 2. Patch @opentui/core ───────────────────────────────────────────────
+const coreFiles = globSync("node_modules/**/@opentui/core/**/*.js");
+
+for (const file of coreFiles) {
+  try {
+    let content = readFileSync(file, "utf-8");
+    let modified = false;
+
+    // Replace renderable.getLayoutNode() calls with safe null-checked accessors
+    if (content.includes('renderable.getLayoutNode()')) {
+      content = content.replace(
+        /renderable\.getLayoutNode\(\)/g,
+        `(typeof renderable.getLayoutNode === "function" ? renderable.getLayoutNode() : (renderable.yogaNode || null))`
+      );
+      modified = true;
+    }
+
+    if (content.includes('anchor.getLayoutNode()')) {
+      content = content.replace(
+        /anchor\.getLayoutNode\(\)/g,
+        `(typeof anchor.getLayoutNode === "function" ? anchor.getLayoutNode() : (anchor.yogaNode || null))`
+      );
+      modified = true;
+    }
+
+    if (modified) {
+      writeFileSync(file, content, "utf-8");
+      console.log(`[patch-opentui] Patched @opentui/core in ${file}`);
     }
   } catch (err: any) {
     console.warn(`[patch-opentui] Warning patching ${file}:`, err.message);
