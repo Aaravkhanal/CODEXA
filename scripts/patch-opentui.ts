@@ -1,8 +1,26 @@
 import { readFileSync, writeFileSync, globSync } from "node:fs";
 
-// ── 1. Patch @opentui/react ──────────────────────────────────────────────
-const reactFiles = globSync("node_modules/**/@opentui/react/**/chunk-rm53pqj2.js");
+function dedupe(arr: string[]): string[] {
+  return [...new Set(arr)];
+}
 
+// ── Collect all @opentui/react reconciler chunks (any nested node_modules) ──
+const reactFiles = dedupe([
+  ...globSync("node_modules/**/@opentui/react/chunk-rm53pqj2.js"),
+  ...globSync("packages/*/node_modules/@opentui/react/chunk-rm53pqj2.js"),
+]);
+
+// ── Collect all @opentui/core JS files (any nested node_modules) ──
+const coreFiles = dedupe([
+  ...globSync("node_modules/@opentui/core/*.js"),
+  ...globSync("node_modules/@opentui/core/**/*.js"),
+  ...globSync("packages/*/node_modules/@opentui/core/*.js"),
+  ...globSync("packages/*/node_modules/@opentui/core/**/*.js"),
+]);
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 1. Patch @opentui/react reconciler
+// ──────────────────────────────────────────────────────────────────────────────
 for (const file of reactFiles) {
   try {
     let content = readFileSync(file, "utf-8");
@@ -66,22 +84,25 @@ for (const file of reactFiles) {
     if (modified) {
       writeFileSync(file, content, "utf-8");
       console.log(`[patch-opentui] Patched @opentui/react in ${file}`);
+    } else {
+      console.log(`[patch-opentui] @opentui/react already patched: ${file}`);
     }
   } catch (err: any) {
     console.warn(`[patch-opentui] Warning patching ${file}:`, err.message);
   }
 }
 
-// ── 2. Patch @opentui/core ───────────────────────────────────────────────
-const coreFiles = globSync("node_modules/**/@opentui/core/**/*.js");
-
+// ──────────────────────────────────────────────────────────────────────────────
+// 2. Patch @opentui/core — make all renderable.getLayoutNode() calls null-safe
+// ──────────────────────────────────────────────────────────────────────────────
 for (const file of coreFiles) {
   try {
     let content = readFileSync(file, "utf-8");
     let modified = false;
 
     // Replace renderable.getLayoutNode() calls with safe null-checked accessors
-    if (content.includes('renderable.getLayoutNode()')) {
+    // Guard: check that a raw call exists and the safe wrapper is NOT already there
+    if (content.includes('renderable.getLayoutNode()') && !content.includes('typeof renderable.getLayoutNode === "function" ? renderable.getLayoutNode()')) {
       content = content.replace(
         /renderable\.getLayoutNode\(\)/g,
         `(typeof renderable.getLayoutNode === "function" ? renderable.getLayoutNode() : (renderable.yogaNode || null))`
@@ -89,7 +110,7 @@ for (const file of coreFiles) {
       modified = true;
     }
 
-    if (content.includes('anchor.getLayoutNode()')) {
+    if (content.includes('anchor.getLayoutNode()') && !content.includes('typeof anchor.getLayoutNode === "function" ? anchor.getLayoutNode()')) {
       content = content.replace(
         /anchor\.getLayoutNode\(\)/g,
         `(typeof anchor.getLayoutNode === "function" ? anchor.getLayoutNode() : (anchor.yogaNode || null))`
