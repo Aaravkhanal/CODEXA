@@ -170,7 +170,7 @@ export function Home() {
             <text attributes={TextAttributes.DIM}>{projectInfo.path}</text>
           </box>
 
-          {projectInfo.isSystemOrHomeDir && (
+          {projectInfo.isSystemOrHomeDir ? (
             <box flexDirection="column" backgroundColor="yellow" paddingX={1}>
               <text fg="black" attributes={TextAttributes.BOLD}>
                 ⚠ NOTICE: CodeXA was started in your Home or Root directory.
@@ -179,7 +179,7 @@ export function Home() {
                 Make sure you are in the intended project directory before executing commands.
               </text>
             </box>
-          )}
+          ) : null}
 
           <box flexDirection="row" gap={2} marginTop={1}>
             <text fg="white">Detected:</text>
@@ -189,11 +189,11 @@ export function Home() {
             {projectInfo.languages.map((lang) => (
               <text key={lang} fg="yellow">✓ {lang}</text>
             ))}
-            {projectInfo.hasGit && (
+            {projectInfo.hasGit ? (
               <text fg="green">
                 ✓ Git {projectInfo.gitBranch ? `(${projectInfo.gitBranch})` : ""}
               </text>
-            )}
+            ) : null}
           </box>
 
           <box flexDirection="row" gap={2}>
@@ -212,7 +212,7 @@ export function Home() {
           </box>
 
           {/* Resume previous session memory banner if exists */}
-          {resumeInfo.hasMemory && resumeInfo.lastSummary && (
+          {resumeInfo.hasMemory && resumeInfo.lastSummary ? (
             <box
               flexDirection="column"
               backgroundColor={colors.surface}
@@ -227,7 +227,7 @@ export function Home() {
                 {resumeInfo.lastSummary}
               </text>
             </box>
-          )}
+          ) : null}
         </box>
 
         {/* Model Setup config card */}
