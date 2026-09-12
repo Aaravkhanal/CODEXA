@@ -126,15 +126,26 @@ Select your AI provider:
 | Slash Command | Purpose |
 | --- | --- |
 | `/help` | Show available commands and tool usage guide |
-| `/model` / `/models` | Switch active AI model on the fly |
+| `/model` / `/models` | Switch active AI model on the fly & add/configure provider API keys inline |
+| `/apikey` / `/config` | Configure or update API keys for providers (Anthropic, OpenAI, Google, Groq) |
 | `/memory` | Inspect, import, or export project memory (`.codexa/memory.md`) |
 | `/context` | Display detected project context, frameworks, and languages |
 | `/diff` | Inspect Git diff of modifications made by CodeXA |
 | `/undo` | Rollback last modified file changes |
 | `/sessions` | Browse past conversations and resume work |
-| `/config` | Update AI provider API keys |
 | `/clear` | Clear message history |
 | `/exit` | Gracefully quit session |
+
+---
+
+## 🤖 Model Switching & API Key Management
+
+CODEXA supports seamless model switching and inline key configuration directly within the interactive terminal user interface:
+
+- **Model Selector Dialog (`/model`)**: Open the model selector to view all supported chat models across Anthropic (`claude-*`), OpenAI (`gpt-*`), Google (`gemini-*`), and Groq (`llama-*`).
+- **Inline API Key Status & Setup**: Each model item clearly indicates whether its provider API key is active (`✓ Key active`) or required (`! Key Required`).
+- **Instant Key Configuration**: Click `[ + Add API Key ]` or select any unconfigured model to open the API key setup modal directly inside the TUI. Enter your key and press `Enter` to save it to `~/.codexa/api-keys.json` and start using that model instantly.
+- **Cost-Aware Routing**: Switch between high-reasoning models (e.g. `claude-sonnet-4-6`, `gpt-5.4`) and fast cost-effective models (`gemini-2.5-flash`, `gpt-4o-mini`) on the fly.
 
 ---
 
