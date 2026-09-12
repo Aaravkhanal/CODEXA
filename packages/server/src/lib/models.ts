@@ -69,8 +69,9 @@ function resolveAnthropicModel(modelId: AnthropicModelId, apiKey?: string): Reso
     apiKey: apiKey ?? process.env.ANTHROPIC_API_KEY,
   });
   let sdkModelId: string = modelId;
-  if (modelId === "claude-3-5-sonnet") sdkModelId = "claude-3-5-sonnet-latest";
-  else if (modelId === "claude-3-5-haiku") sdkModelId = "claude-3-5-haiku-latest";
+  if (modelId === "claude-opus-4-6") sdkModelId = "claude-3-opus-20240229";
+  else if (modelId === "claude-sonnet-4-6" || modelId === "claude-3-5-sonnet") sdkModelId = "claude-3-5-sonnet-latest";
+  else if (modelId === "claude-haiku-4-5" || modelId === "claude-3-5-haiku") sdkModelId = "claude-3-5-haiku-latest";
   return {
     model: provider(sdkModelId),
     provider: "anthropic",
@@ -84,7 +85,9 @@ function resolveOpenAIModel(modelId: OpenAIModelId, apiKey?: string): ResolvedMo
     apiKey: apiKey ?? process.env.OPENAI_API_KEY,
   });
   let sdkModelId: string = modelId;
-  if (modelId === "gpt-4o") sdkModelId = "gpt-4o";
+  if (modelId === "gpt-5.4") sdkModelId = "gpt-4o";
+  else if (modelId === "gpt-5.4-mini" || modelId === "gpt-5.4-nano") sdkModelId = "gpt-4o-mini";
+  else if (modelId === "gpt-4o") sdkModelId = "gpt-4o";
   else if (modelId === "gpt-4o-mini") sdkModelId = "gpt-4o-mini";
   return {
     model: provider(sdkModelId),
@@ -99,8 +102,8 @@ function resolveGoogleModel(modelId: GoogleModelId, apiKey?: string): ResolvedMo
     apiKey: apiKey ?? process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY,
   });
   let sdkModelId: string = modelId;
-  if (modelId === "gemini-2.5-pro") sdkModelId = "gemini-2.5-pro";
-  else if (modelId === "gemini-2.5-flash") sdkModelId = "gemini-2.5-flash";
+  if (modelId === "gemini-2.5-pro") sdkModelId = "gemini-1.5-pro";
+  else if (modelId === "gemini-2.5-flash") sdkModelId = "gemini-2.0-flash";
   return {
     model: google(sdkModelId),
     provider: "google",

@@ -378,6 +378,7 @@ export class AgentOrchestrator {
       system: CODER_SYSTEM_PROMPT,
       tools: this.tools,
       prompt: promptText,
+      maxSteps: 15,
       onStepFinish({ toolResults }: any) {
         for (const result of toolResults ?? []) {
           if (
@@ -464,6 +465,7 @@ export class AgentOrchestrator {
       system: DEBUGGER_SYSTEM_PROMPT,
       tools: this.tools,
       prompt: `Original task: ${task}\n\nOriginal plan:\n${plan}\n\nTest failure output:\n${testResult.output}\n\nProject files:\n${contextBlock}\n\nAnalyze the test failure and fix the root cause.`,
+      maxSteps: 10,
       onStepFinish({ toolResults }: any) {
         for (const result of toolResults ?? []) {
           if (

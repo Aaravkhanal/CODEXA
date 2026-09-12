@@ -172,24 +172,26 @@ export function createLanguageModel(config: ProviderConfig): LanguageModel {
 
     case "anthropic": {
       const client = createAnthropic({ apiKey: config.apiKey });
-      // Map friendly IDs to SDK IDs
       const sdkId = mapAnthropicModelId(config.model);
       return client(sdkId) as any;
     }
 
     case "openai": {
       const client = createOpenAI({ apiKey: config.apiKey });
-      return client(config.model) as any;
+      const sdkId = mapOpenAIModelId(config.model);
+      return client(sdkId) as any;
     }
 
     case "google": {
       const client = createGoogleGenerativeAI({ apiKey: config.apiKey });
-      return client(config.model) as any;
+      const sdkId = mapGoogleModelId(config.model);
+      return client(sdkId) as any;
     }
 
     case "groq": {
       const client = createGroq({ apiKey: config.apiKey });
-      return client(config.model) as any;
+      const sdkId = mapGroqModelId(config.model);
+      return client(sdkId) as any;
     }
 
     case "ollama": {
@@ -324,7 +326,26 @@ export async function testProviderConnection(config: ProviderConfig): Promise<Pr
 // ---------------------------------------------------------------------------
 
 function mapAnthropicModelId(id: string): string {
-  if (id === "claude-3-5-sonnet") return "claude-3-5-sonnet-latest";
-  if (id === "claude-3-5-haiku") return "claude-3-5-haiku-latest";
+  if (id === "claude-opus-4-6") return "claude-3-opus-20240229";
+  if (id === "claude-sonnet-4-6" || id === "claude-3-5-sonnet") return "claude-3-5-sonnet-latest";
+  if (id === "claude-haiku-4-5" || id === "claude-3-5-haiku") return "claude-3-5-haiku-latest";
+  return id;
+}
+
+function mapOpenAIModelId(id: string): string {
+  if (id === "gpt-5.4") return "gpt-4o";
+  if (id === "gpt-5.4-mini" || id === "gpt-5.4-nano") return "gpt-4o-mini";
+  return id;
+}
+
+function mapGoogleModelId(id: string): string {
+  if (id === "gemini-2.5-pro") return "gemini-1.5-pro";
+  if (id === "gemini-2.5-flash") return "gemini-2.0-flash";
+  return id;
+}
+
+function mapGroqModelId(id: string): string {
+  if (id === "llama-3.3-70b-versatile") return "llama-3.3-70b-versatile";
+  if (id === "llama-3.1-8b-instant") return "llama-3.1-8b-instant";
   return id;
 }

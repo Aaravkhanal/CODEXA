@@ -26,6 +26,12 @@ export const apiClient = hc<AppType>(
       if (storedKeys.openai) {
         headers.set("X-OpenAI-Key", storedKeys.openai);
       }
+      if (storedKeys.google || storedKeys.gemini) {
+        headers.set("X-Google-Key", storedKeys.google || storedKeys.gemini!);
+      }
+      if (storedKeys.groq) {
+        headers.set("X-Groq-Key", storedKeys.groq);
+      }
 
       const response = await fetch(input, { ...init, headers });
       if (response.status === 401) {

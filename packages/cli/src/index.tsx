@@ -14,9 +14,21 @@ import { runImportCommand } from "./lib/import-cmd";
 import { runCheckpointCommand } from "./lib/checkpoint-cmd";
 import { isFirstRun, migrateFromLegacyApiKeys } from "./lib/global-config";
 import { execSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 
 const version = typeof CODEXA_VERSION === "string" ? CODEXA_VERSION : "dev";
 const args = process.argv.slice(2);
+
+// ── Target directory override (--cwd / -C) ──────────────────────────────────
+if (cliArgs.cwdArg) {
+  const targetCwd = resolve(process.cwd(), cliArgs.cwdArg);
+  if (!existsSync(targetCwd)) {
+    console.error(`Error: Specified working directory does not exist: ${targetCwd}`);
+    process.exit(1);
+  }
+  process.chdir(targetCwd);
+}
 
 // ── Version / Help (always available, no config needed) ───────────────────
 if (args.includes("--version") || args.includes("-v")) {
