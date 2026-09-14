@@ -12,10 +12,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^1.0.0",
-    "@ai-sdk/google": "^1.0.0",
-    "@ai-sdk/groq": "^1.0.0",
-    "@ai-sdk/openai": "^1.0.0",
+    "@ai-sdk/anthropic": "^4.0.52",
+    "@ai-sdk/google": "^4.0.67",
+    "@ai-sdk/groq": "^4.0.40",
+    "@ai-sdk/openai": "^4.0.65",
     "@codexa/shared": "workspace:*",
     "ai": "^7.0.58",
     "zod": "^4.4.3"
