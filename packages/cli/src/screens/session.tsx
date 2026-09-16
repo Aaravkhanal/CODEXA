@@ -12,7 +12,7 @@ import {
   ErrorMessage,
 } from "../components/messages";
 import { apiClient } from "../lib/api-client";
-import { useChat } from "../hooks/use-chat";
+import { useLocalAgentChat } from "../hooks/use-local-agent-chat";
 import { usePromptConfig } from "../providers/prompt-config";
 import type { Message } from "../hooks/use-chat";
 import { useToast } from "../providers/toast";
@@ -73,7 +73,6 @@ function SessionChat({
   session: SessionData;
   initialPrompt?: InitialPrompt;
 }) {
-  const [initialMessages] = useState(() => session.messages as unknown as Message[]);
   const { model, mode } = usePromptConfig();
   const { isTopLayer } = useKeyboardLayer();
   const dialog = useDialog();
@@ -95,7 +94,7 @@ function SessionChat({
     });
   }, [dialog]);
 
-  const { messages, status, submit, abort, interrupt, error } = useChat(session.id, initialMessages, { askConfirmation });
+  const { messages, status, submit, abort, interrupt, error } = useLocalAgentChat({ askConfirmation });
   const hasSubmittedInitialPromptRef = useRef(false);
 
   // Stop the pending reply when the user leaves this session.
@@ -137,8 +136,8 @@ function SessionChat({
       onSubmit={(text) => {
         submit({ userText: text, mode, model });
       }}
-      loading={status === "submitted" || status === "streaming"}
-      interruptible={status === "submitted" || status === "streaming"}
+      loading={status === "streaming"}
+      interruptible={status === "streaming"}
     >
       {messages.map((msg) => (
         <ChatMessage key={msg.id} msg={msg} />
