@@ -27,6 +27,13 @@ shared-library, and landing-page work is:
 
 4. Keep changes scoped to the issue or improvement you are working on.
 
+## Community workflow
+
+1. Check the [public roadmap](./ROADMAP.md) and existing issues before starting work.
+2. For a larger change, open an issue first so maintainers and contributors can align on scope.
+3. Be respectful and follow the [Code of Conduct](./CODE_OF_CONDUCT.md).
+4. Report security vulnerabilities privately under the [security policy](./SECURITY.md); do not disclose them in a public issue.
+
 ## Project Structure
 
 | Path | Area |

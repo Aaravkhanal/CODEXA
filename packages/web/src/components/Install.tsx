@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Icon, writeClipboard, AnimatedSectionHeading } from "./Shared";
 
 const installOptions = [
+  { id: "npm", method: "npm", os: "macOS + Linux + Windows", command: "npm install -g codexa", step: "cd your-project && codexa" },
   { id: "brew", method: "Homebrew", os: "macOS + Linux", command: "brew install Aaravkhanal/tap/codexa", step: "codexa" },
   { id: "shell", method: "Curl / Shell", os: "macOS + Linux", command: "curl -fsSL https://raw.githubusercontent.com/Aaravkhanal/CODEXA/main/install.sh | sh", step: "codexa" },
   { id: "windows", method: "PowerShell", os: "Windows", command: "irm https://raw.githubusercontent.com/Aaravkhanal/CODEXA/main/install.ps1 | iex", step: "codexa" },
@@ -35,7 +36,7 @@ export function Install() {
       <div className="install-header">
         <AnimatedSectionHeading>Install CODEXA.</AnimatedSectionHeading>
         <p className="install-subtitle">
-          Install the standalone binary, open a project directory, and run <code>codexa</code>.
+          Install CODEXA, open any project directory, then run <code>codexa</code>. Your first run guides you through provider setup.
         </p>
       </div>
 
@@ -62,6 +63,7 @@ export function Install() {
                     <code className="install-code-text">{option.command}</code>
                     <CopyButton text={option.command} />
                   </div>
+                  <p className="install-next-step">Then: <code>{option.step}</code></p>
                 </td>
               </tr>
             ))}

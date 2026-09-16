@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./packages/web/public/demo.gif" alt="CODEXA - open-source terminal coding agent" width="100%" />
+  <img src="./packages/web/public/demo.png" alt="CODEXA terminal walkthrough" width="100%" />
 </p>
 
 <p align="center">
@@ -16,6 +16,8 @@
   <a href="./docs/RELEASING.md">Release Guide</a>
   ·
   <a href="./CONTRIBUTING.md">Contributing</a>
+  ·
+  <a href="./ROADMAP.md">Roadmap</a>
   ·
   <a href="./docs/DEVELOPMENT.md">Development</a>
   ·
@@ -85,6 +87,32 @@ To update a global installation later:
 ```bash
 npm update -g codexa
 ```
+
+### Provider compatibility
+
+| Provider | Setup | Recommended use |
+| --- | --- | --- |
+| Anthropic | API key | Deep implementation and review |
+| OpenAI | API key | General coding and tool use |
+| Google Gemini | API key | Long-context analysis |
+| Groq | API key | Fast, lower-cost iterations |
+| Ollama | Local server | Private local-model workflows |
+| OpenRouter | API key | A broad provider catalogue through one key |
+
+When only one provider is configured, CODEXA uses it automatically. When more
+than one is available, it recommends an appropriate model and lets you choose.
+Keys stay in the local CODEXA configuration directory and should never be added
+to project files or prompts.
+
+### Try an example
+
+```bash
+npm create vite@latest my-app -- --template react-ts && cd my-app && codexa
+npx create-next-app@latest my-app && cd my-app && codexa
+```
+
+See [examples/README.md](./examples/README.md) for first prompts and command
+ideas for React, Next.js, Python, and existing repositories.
 
 ### Install from Source (GitHub)
 

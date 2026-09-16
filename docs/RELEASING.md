@@ -7,10 +7,10 @@ production Railway API by default.
 ## One-time repository configuration
 
 1. Protect `main` and require the `CI / validate` check.
-2. Create the `codexa/homebrew-tap` public repository with a `Formula`
+2. Create the `Aaravkhanal/homebrew-tap` public repository with a `Formula`
    directory and a protected `main` branch.
 3. Add this Actions variable to the CODEXA repository:
-   - `HOMEBREW_TAP_REPOSITORY=codexa/homebrew-tap`
+   - `HOMEBREW_TAP_REPOSITORY=Aaravkhanal/homebrew-tap`
 4. Add `HOMEBREW_TAP_TOKEN` as an Actions secret. Use a fine-grained token or
    GitHub App token restricted to the tap repository with Contents and Pull
    requests write access.
@@ -20,6 +20,10 @@ production Railway API by default.
 
 Do not place database URLs, Clerk secret keys, provider API keys, billing keys,
 or other credentials in GitHub variables used by the binary build.
+
+6. Configure npm trusted publishing for the `codexa` package and this repository.
+   The release workflow uses npm's OIDC provenance flow; it deliberately does
+   not require an `NPM_TOKEN` secret.
 
 ## Creating a release
 
@@ -39,8 +43,9 @@ The tag must match the CLI version. Tags with a prerelease suffix, such as
 
 The release workflow validates the project, builds eight platform targets,
 creates archives and checksums, generates GitHub provenance attestations, and
-publishes the GitHub Release. If Homebrew is configured, it then tests the new
-formula and opens an update PR in the tap repository.
+publishes the GitHub Release and the `codexa` npm installer. If Homebrew is
+configured, it then tests the new formula and opens an update PR in the tap
+repository.
 
 ## Verifying release assets
 
@@ -48,7 +53,7 @@ formula and opens an update PR in the tap repository.
 gh release download v0.1.0
 shasum -a 256 -c SHA256SUMS
 gh attestation verify codexa-v0.1.0-darwin-arm64.tar.gz \
-  --repo codexa/codexa
+  --repo Aaravkhanal/CODEXA
 ```
 
 Before promoting the first stable release, test the TUI, login, chat, local
@@ -61,7 +66,7 @@ packages before launching the binary.
 Users install the formula directly from the tap:
 
 ```sh
-brew install codexa/tap/codexa
+brew install Aaravkhanal/tap/codexa
 ```
 
 After the automated formula PR is reviewed and merged, `brew update` and

@@ -2,6 +2,7 @@ import { Header } from "./components/Header";
 import { Hero } from "./components/Hero";
 import { ProductTour } from "./components/ProductTour";
 import { Install } from "./components/Install";
+import { Adoption } from "./components/Adoption";
 import { Footer } from "./components/Footer";
 
 export default function App() {
@@ -11,6 +12,7 @@ export default function App() {
       <main>
         <Hero />
         <ProductTour />
+        <Adoption />
         <Install />
       </main>
       <Footer />

@@ -22,6 +22,7 @@ export function Header() {
           <a href="#product">PRODUCT</a>
           <a href="#commands">COMMANDS</a>
           <a href="#themes">THEMES</a>
+          <a href="#compatibility">PROVIDERS</a>
           <a href="#install">INSTALL</a>
         </nav>
         <AnimatePresence>
@@ -37,6 +38,7 @@ export function Header() {
               <a href="#product" onClick={() => setOpen(false)}>PRODUCT</a>
               <a href="#commands" onClick={() => setOpen(false)}>COMMANDS</a>
               <a href="#themes" onClick={() => setOpen(false)}>THEMES</a>
+              <a href="#compatibility" onClick={() => setOpen(false)}>PROVIDERS</a>
               <a href="#install" onClick={() => setOpen(false)}>INSTALL</a>
               <a className="nav-github nav-github-menu" href={GITHUB_URL} target="_blank" rel="noreferrer">
                 <MarkGithubIcon aria-hidden="true" size={16} /> GITHUB

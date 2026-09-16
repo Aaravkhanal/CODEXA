@@ -8,6 +8,11 @@ This document outlines the planned, in-progress, and future features of CODEXA. 
 
 These are active focus areas or quick wins that are highly requested.
 
+### 📦 Distribution and contributor experience
+- **Status**: In progress — GitHub Releases, npm installer publishing, Homebrew automation, and Windows installation are wired into the release process.
+- **Next**: Keep the provider compatibility table and examples current as providers and installers evolve.
+- **Help Needed**: Test release binaries on fresh macOS, Windows, and Linux machines; report results with the installed version and platform.
+
 ### 🔌 Plugin / Extension System for Custom Tools
 - **Goal**: Enable external node/npm packages or local configuration scripts to register custom MCP-like tools or CLI plugins without rebuilding the core binaries.
 - **Implementation**: Discover plugins listed in `~/.codexa/plugins.json`. Dynamically spawn or register their command-line bindings into the Hono server's tool runtime.

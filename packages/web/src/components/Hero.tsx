@@ -383,8 +383,8 @@ export function Hero() {
             <span>GET STARTED</span>
             <Icon name="arrow" />
           </a>
-          <a className="button button-secondary" href="/demo.gif" target="_blank" rel="noreferrer">
-            <span>WATCH DEMO</span>
+          <a className="button button-secondary" href="#demo">
+            <span>VIEW 60-SEC DEMO</span>
           </a>
           <a className="button button-secondary" href={GITHUB_URL} target="_blank" rel="noreferrer">
             <MarkGithubIcon size={18} />
