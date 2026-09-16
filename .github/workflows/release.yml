@@ -161,7 +161,7 @@ jobs:
           done
           chmod +x artifacts/darwin-*/codexa artifacts/linux-*/codexa
       - name: Sign macOS Binaries
-        if: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
+        if: ${{ env.APPLE_CERTIFICATE_BASE64 != '' }}
         env:
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -183,7 +183,7 @@ jobs:
           done
           rm -f certificate.p12
       - name: Sign Windows Binaries
-        if: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 != '' }}
+        if: ${{ env.WINDOWS_CERTIFICATE_BASE64 != '' }}
         env:
           WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
           WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
