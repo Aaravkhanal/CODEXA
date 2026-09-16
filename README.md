@@ -45,6 +45,33 @@ cd my-project
 codexa
 ```
 
+### Use CODEXA in any project
+
+CODEXA is installed once per computer; it does not need to be copied into every repository. Open a terminal in the project you want help with and run:
+
+```bash
+cd ~/Projects/my-app
+codexa
+```
+
+On the first run, choose a provider and add an API key. The key is saved privately in `~/.codexa/`; project-specific notes and memory are stored only in that project's `.codexa/` directory. Run this once in a project when you want to create the optional project instructions and memory files:
+
+```bash
+codexa init
+```
+
+For a one-off task without installing globally:
+
+```bash
+npx codexa@latest "review this repository and fix the failing tests"
+```
+
+To update a global installation later:
+
+```bash
+npm update -g codexa
+```
+
 ### Install from Source (GitHub)
 
 ```bash

@@ -22,6 +22,8 @@ import { useDialog } from "../providers/dialog";
 import { CodexaLensDialogContent } from "../components/dialogs/codexalens-dialog";
 import { AddApiKeyDialogContent } from "../components/dialogs/add-api-key-dialog";
 import { ConfirmToolDialogContent } from "../components/dialogs";
+import { ModelsDialogContent } from "../components/dialogs/models-dialog";
+import { SUPPORTED_CHAT_MODELS } from "@codexa/shared";
 
 type SessionData = InferResponseType<(typeof apiClient.sessions)[":id"]["$get"], 200>;
 
@@ -73,7 +75,8 @@ function SessionChat({
   session: SessionData;
   initialPrompt?: InitialPrompt;
 }) {
-  const { model, mode } = usePromptConfig();
+  const { model, mode, setModel } = usePromptConfig();
+  const navigate = useNavigate();
   const { isTopLayer } = useKeyboardLayer();
   const dialog = useDialog();
 
@@ -139,6 +142,32 @@ function SessionChat({
       loading={status === "streaming"}
       interruptible={status === "streaming"}
     >
+      <box flexDirection="row" gap={2} marginBottom={1}>
+        <box
+          paddingX={1}
+          backgroundColor="gray"
+          onMouseDown={() => navigate("/")}
+        >
+          <text fg="black">← Home / New task</text>
+        </box>
+        <box
+          paddingX={1}
+          backgroundColor="cyan"
+          onMouseDown={() => {
+            dialog.open({
+              title: "Switch model for the next task",
+              children: (
+                <ModelsDialogContent
+                  models={SUPPORTED_CHAT_MODELS.map((candidate) => candidate.id)}
+                  onSelectModel={setModel}
+                />
+              ),
+            });
+          }}
+        >
+          <text fg="black">Model: {model} (/model)</text>
+        </box>
+      </box>
       {messages.map((msg) => (
         <ChatMessage key={msg.id} msg={msg} />
       ))}
