@@ -86,6 +86,8 @@ export interface OrchestratorResult {
   testsPassed: boolean | null;
   debugRetries: number;
   totalTokensUsed: number;
+  inputTokensUsed: number;
+  outputTokensUsed: number;
   durationMs: number;
 }
 
@@ -106,6 +108,8 @@ export class AgentOrchestrator {
   private readonly permissionEngine: PermissionEngine;
   private readonly memoryManager: ProjectMemoryManager;
   private totalTokensUsed = 0;
+  private inputTokensUsed = 0;
+  private outputTokensUsed = 0;
 
   constructor(options: OrchestratorOptions) {
     this.options = {
@@ -140,6 +144,7 @@ export class AgentOrchestrator {
    */
   async run(task: string): Promise<OrchestratorResult> {
     const startMs = Date.now();
+    this.resetUsage();
     const emit = (event: AgentProgressEvent) => this.options.onProgress(event);
     let filesModified: string[] = [];
     let debugRetries = 0;
@@ -203,6 +208,8 @@ export class AgentOrchestrator {
           testsPassed,
           debugRetries,
           totalTokensUsed: this.totalTokensUsed,
+          inputTokensUsed: this.inputTokensUsed,
+          outputTokensUsed: this.outputTokensUsed,
           durationMs: Date.now() - startMs,
         };
       }
@@ -297,6 +304,8 @@ export class AgentOrchestrator {
         testsPassed,
         debugRetries,
         totalTokensUsed: this.totalTokensUsed,
+        inputTokensUsed: this.inputTokensUsed,
+        outputTokensUsed: this.outputTokensUsed,
         durationMs: Date.now() - startMs,
       };
     } catch (err: unknown) {
@@ -323,6 +332,8 @@ export class AgentOrchestrator {
         testsPassed,
         debugRetries,
         totalTokensUsed: this.totalTokensUsed,
+        inputTokensUsed: this.inputTokensUsed,
+        outputTokensUsed: this.outputTokensUsed,
         durationMs: Date.now() - startMs,
       };
     }
@@ -332,8 +343,17 @@ export class AgentOrchestrator {
    * Analyze a task and return an implementation plan without invoking tools,
    * creating checkpoints, installing dependencies, or editing project files.
    */
-  async plan(task: string): Promise<{ plan: string; totalTokensUsed: number; durationMs: number }> {
+  async plan(
+    task: string,
+  ): Promise<{
+    plan: string;
+    totalTokensUsed: number;
+    inputTokensUsed: number;
+    outputTokensUsed: number;
+    durationMs: number;
+  }> {
     const startMs = Date.now();
+    this.resetUsage();
     const emit = (event: AgentProgressEvent) => this.options.onProgress(event);
 
     emit({ phase: "exploring", message: "Analyzing project for a read-only plan..." });
@@ -363,6 +383,8 @@ export class AgentOrchestrator {
     return {
       plan,
       totalTokensUsed: this.totalTokensUsed,
+      inputTokensUsed: this.inputTokensUsed,
+      outputTokensUsed: this.outputTokensUsed,
       durationMs: Date.now() - startMs,
     };
   }
@@ -395,7 +417,7 @@ export class AgentOrchestrator {
       system: EXPLORER_SYSTEM_PROMPT,
       prompt: promptText,
     });
-    this.totalTokensUsed += usage?.totalTokens ?? 0;
+    this.recordUsage(usage);
     return text;
   }
 
@@ -428,7 +450,7 @@ export class AgentOrchestrator {
       system: PLANNER_SYSTEM_PROMPT,
       prompt: promptText,
     });
-    this.totalTokensUsed += usage?.totalTokens ?? 0;
+    this.recordUsage(usage);
     return text;
   }
 
@@ -468,7 +490,7 @@ export class AgentOrchestrator {
         }
       },
     });
-    this.totalTokensUsed += usage?.totalTokens ?? 0;
+    this.recordUsage(usage);
 
     return { filesModified };
   }
@@ -554,7 +576,7 @@ export class AgentOrchestrator {
         }
       },
     });
-    this.totalTokensUsed += usage?.totalTokens ?? 0;
+    this.recordUsage(usage);
 
     return { filesModified };
   }
@@ -582,8 +604,24 @@ export class AgentOrchestrator {
       system: REVIEWER_SYSTEM_PROMPT,
       prompt: `Original task: ${task}\n\nModified files:\n${fileContents}\n\nProvide a concise code review summary. Identify any obvious issues, missing error handling, or improvements.`,
     });
-    this.totalTokensUsed += usage?.totalTokens ?? 0;
+    this.recordUsage(usage);
     return text;
+  }
+
+  private resetUsage(): void {
+    this.totalTokensUsed = 0;
+    this.inputTokensUsed = 0;
+    this.outputTokensUsed = 0;
+  }
+
+  private recordUsage(
+    usage: { totalTokens?: number; inputTokens?: number; outputTokens?: number } | undefined,
+  ): void {
+    const input = usage?.inputTokens ?? 0;
+    const output = usage?.outputTokens ?? 0;
+    this.inputTokensUsed += input;
+    this.outputTokensUsed += output;
+    this.totalTokensUsed += usage?.totalTokens ?? input + output;
   }
 }
 

@@ -15,23 +15,13 @@ import { detectProject } from "../lib/project-detector";
 import { addRecentProject } from "../lib/recent-projects";
 import { cliArgs } from "../lib/cli-args";
 import { getProviderForModel } from "../lib/model-utils";
+import { recommendTaskModel } from "../lib/task-model-router";
 import { ProjectMemoryManager } from "@codexa/agent";
 
 function configuredModels() {
-  return SUPPORTED_CHAT_MODELS
-    .filter((candidate) => hasApiKey(getProviderForModel(candidate.id)))
-    .map((candidate) => candidate.id);
-}
-
-function recommendModel(models: ReturnType<typeof configuredModels>) {
-  return models.reduce((best, candidate) => {
-    const bestPricing = SUPPORTED_CHAT_MODELS.find((model) => model.id === best)!.pricing;
-    const candidatePricing = SUPPORTED_CHAT_MODELS.find((model) => model.id === candidate)!.pricing;
-    return candidatePricing.inputUsdPerMillionTokens + candidatePricing.outputUsdPerMillionTokens
-      < bestPricing.inputUsdPerMillionTokens + bestPricing.outputUsdPerMillionTokens
-      ? candidate
-      : best;
-  }, models[0]!);
+  return SUPPORTED_CHAT_MODELS.filter((candidate) =>
+    hasApiKey(getProviderForModel(candidate.id)),
+  ).map((candidate) => candidate.id);
 }
 
 export function Home() {
@@ -57,12 +47,7 @@ export function Home() {
   const openAgentSetup = useCallback(() => {
     dialog.open({
       title: "Configure Agent AI Model & API Key",
-      children: (
-        <AddApiKeyDialogContent
-          initialModelId={model}
-          onSaved={() => dialog.close()}
-        />
-      ),
+      children: <AddApiKeyDialogContent initialModelId={model} onSaved={() => dialog.close()} />,
     });
   }, [dialog, model]);
 
@@ -115,7 +100,9 @@ export function Home() {
                 initialModelId={model}
                 onSaved={() => {
                   dialog.close();
-                  navigate("/sessions/new", { state: { message: promptText, mode: initialMode, model } });
+                  navigate("/sessions/new", {
+                    state: { message: promptText, mode: initialMode, model },
+                  });
                 }}
               />
             ),
@@ -129,8 +116,9 @@ export function Home() {
 
   const handleSubmit = useCallback(
     (text: string) => {
-      const currentProvider = getProviderForModel(model);
-      if (!hasApiKey(currentProvider)) {
+      const availableModels = configuredModels();
+      if (availableModels.length === 0) {
+        const currentProvider = getProviderForModel(model);
         dialog.open({
           title: `Setup ${currentProvider.toUpperCase()} API Key for ${model}`,
           children: (
@@ -145,11 +133,11 @@ export function Home() {
         return;
       }
 
-      const availableModels = configuredModels();
-      if (availableModels.length > 1) {
-        const recommended = recommendModel(availableModels);
+      const configuredProviderCount = new Set(availableModels.map(getProviderForModel)).size;
+      const recommendation = recommendTaskModel(text, mode, availableModels, model);
+      if (configuredProviderCount > 1) {
         dialog.open({
-          title: `Choose model — recommended: ${recommended}`,
+          title: `Choose model — recommended: ${recommendation.model}`,
           children: (
             <ModelsDialogContent
               models={availableModels}
@@ -162,7 +150,8 @@ export function Home() {
         });
         return;
       }
-      navigate("/sessions/new", { state: { message: text, mode, model } });
+      setModel(recommendation.model);
+      navigate("/sessions/new", { state: { message: text, mode, model: recommendation.model } });
     },
     [navigate, mode, model, dialog, setModel],
   );
@@ -189,17 +178,17 @@ export function Home() {
           gap={1}
         >
           <text fg={colors.primary} attributes={TextAttributes.BOLD}>
-            ╭──────────────────────────────────────────────╮
-            │                 CODEXA                       │
-            │        AI Coding Agent for your repo         │
-            ╰──────────────────────────────────────────────╯
+            ╭──────────────────────────────────────────────╮ │ CODEXA │ │ AI Coding Agent for your
+            repo │ ╰──────────────────────────────────────────────╯
           </text>
-          
+
           <box flexDirection="row" gap={1}>
-            <text fg="white" attributes={TextAttributes.BOLD}>Project:</text>
+            <text fg="white" attributes={TextAttributes.BOLD}>
+              Project:
+            </text>
             <text fg={colors.info}>{projectInfo.name}</text>
           </box>
-          
+
           <box flexDirection="row" gap={1}>
             <text fg="white">Path:</text>
             <text attributes={TextAttributes.DIM}>{projectInfo.path}</text>
@@ -219,10 +208,14 @@ export function Home() {
           <box flexDirection="row" gap={2} marginTop={1}>
             <text fg="white">Detected:</text>
             {projectInfo.frameworks.map((fw) => (
-              <text key={fw} fg="cyan">✓ {fw}</text>
+              <text key={fw} fg="cyan">
+                ✓ {fw}
+              </text>
             ))}
             {projectInfo.languages.map((lang) => (
-              <text key={lang} fg="yellow">✓ {lang}</text>
+              <text key={lang} fg="yellow">
+                ✓ {lang}
+              </text>
             ))}
             {projectInfo.hasGit ? (
               <text fg="green">
@@ -287,33 +280,29 @@ export function Home() {
 
           <box flexDirection="row" gap={1} alignItems="center">
             <text fg="white">Agent Model: </text>
-            <text fg={colors.info} attributes={TextAttributes.BOLD}>{model}</text>
+            <text fg={colors.info} attributes={TextAttributes.BOLD}>
+              {model}
+            </text>
             <text fg={colors.dimSeparator}> | </text>
             <text fg="white">Provider: </text>
             <text fg="yellow">{provider}</text>
           </box>
 
           <box flexDirection="row" gap={2} marginTop={1}>
-            <box
-              onMouseDown={openAgentSetup}
-              backgroundColor={colors.selection}
-              paddingX={1}
-            >
-              <text fg="black" attributes={TextAttributes.BOLD}>🔑 Configure Key (/apikey)</text>
+            <box onMouseDown={openAgentSetup} backgroundColor={colors.selection} paddingX={1}>
+              <text fg="black" attributes={TextAttributes.BOLD}>
+                🔑 Configure Key (/apikey)
+              </text>
             </box>
-            <box
-              onMouseDown={openModelSelector}
-              backgroundColor={colors.selection}
-              paddingX={1}
-            >
-              <text fg="black" attributes={TextAttributes.BOLD}>🤖 Switch Model (/model)</text>
+            <box onMouseDown={openModelSelector} backgroundColor={colors.selection} paddingX={1}>
+              <text fg="black" attributes={TextAttributes.BOLD}>
+                🤖 Switch Model (/model)
+              </text>
             </box>
-            <box
-              onMouseDown={openMemoryDialog}
-              backgroundColor={colors.selection}
-              paddingX={1}
-            >
-              <text fg="black" attributes={TextAttributes.BOLD}>🧠 Memory (/memory)</text>
+            <box onMouseDown={openMemoryDialog} backgroundColor={colors.selection} paddingX={1}>
+              <text fg="black" attributes={TextAttributes.BOLD}>
+                🧠 Memory (/memory)
+              </text>
             </box>
           </box>
         </box>

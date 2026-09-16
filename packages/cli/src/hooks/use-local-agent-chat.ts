@@ -10,7 +10,7 @@ import { useCallback, useState } from "react";
 import { getApiKey } from "../lib/api-keys";
 import { cliArgs } from "../lib/cli-args";
 import { getProviderForModel } from "../lib/model-utils";
-import type { Message } from "./use-chat";
+import type { ChatUsage, Message } from "./use-chat";
 
 type SubmitParams = {
   userText: string;
@@ -78,7 +78,7 @@ export function useLocalAgentChat(options?: {
       try {
         const providerConfig = { provider, apiKey, model: params.model } as ProviderConfig;
         let summary: string;
-        let totalTokensUsed: number;
+        let usage: ChatUsage;
         let durationMs: number;
 
         if (isSimpleConversation(params.userText)) {
@@ -89,7 +89,7 @@ export function useLocalAgentChat(options?: {
             prompt: params.userText,
           });
           summary = response.text;
-          totalTokensUsed = response.usage.totalTokens ?? 0;
+          usage = response.usage;
           durationMs = Date.now() - startedAt;
         } else {
           const agent = new AgentOrchestrator({
@@ -107,7 +107,11 @@ export function useLocalAgentChat(options?: {
           if (params.mode === "PLAN") {
             const result = await agent.plan(params.userText);
             summary = result.plan;
-            totalTokensUsed = result.totalTokensUsed;
+            usage = {
+              totalTokens: result.totalTokensUsed,
+              inputTokens: result.inputTokensUsed,
+              outputTokens: result.outputTokensUsed,
+            };
             durationMs = result.durationMs;
             setPlan(result.plan);
           } else {
@@ -115,7 +119,11 @@ export function useLocalAgentChat(options?: {
             summary = result.success
               ? result.summary || "Task completed successfully."
               : `Task failed: ${result.summary}`;
-            totalTokensUsed = result.totalTokensUsed;
+            usage = {
+              totalTokens: result.totalTokensUsed,
+              inputTokens: result.inputTokensUsed,
+              outputTokens: result.outputTokensUsed,
+            };
             durationMs = result.durationMs;
           }
         }
@@ -126,7 +134,7 @@ export function useLocalAgentChat(options?: {
             metadata: {
               mode: params.mode,
               model: params.model,
-              usage: { totalTokens: totalTokensUsed } as any,
+              usage,
               durationMs,
             },
           } as Message,

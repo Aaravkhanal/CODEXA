@@ -1,18 +1,18 @@
 import { useMemo, useRef } from "react";
 import { useChat as useAiChat } from "@ai-sdk/react";
 import {
-    DefaultChatTransport,
-    type InferUITools,
-    lastAssistantMessageIsCompleteWithToolCalls,
-    type LanguageModelUsage,
-    type UIMessage,
+  DefaultChatTransport,
+  type InferUITools,
+  lastAssistantMessageIsCompleteWithToolCalls,
+  type LanguageModelUsage,
+  type UIMessage,
 } from "ai";
 import {
-    type CodexaLensActivityEvent,
-    type CodexaLensFileStatus,
-    type ModeType,
-    type SupportedChatModelId,
-    type ToolContracts,
+  type CodexaLensActivityEvent,
+  type CodexaLensFileStatus,
+  type ModeType,
+  type SupportedChatModelId,
+  type ToolContracts,
 } from "@codexa/shared";
 import { resolve } from "node:path";
 import { getAllApiKeys } from "../lib/api-keys";
@@ -27,226 +27,244 @@ import { cliArgs } from "../lib/cli-args";
 import { saveFileSnapshot } from "../lib/snapshot-manager";
 
 function activityEvent(
-    toolCallId: string,
-    toolName: string,
-    input: unknown,
-    phase: "started" | "completed",
-    failed = false,
-    sessionStartedAt = Date.now(),
-    toolStartedAt?: number,
+  toolCallId: string,
+  toolName: string,
+  input: unknown,
+  phase: "started" | "completed",
+  failed = false,
+  sessionStartedAt = Date.now(),
+  toolStartedAt?: number,
 ): CodexaLensActivityEvent {
-    const timestampMs = Date.now();
-    const args = input && typeof input === "object" ? input as Record<string, unknown> : {};
-    const filePaths = Object.entries(args)
-        .filter(([key, value]) => /^(?:path|file|filePath)$/i.test(key) && typeof value === "string")
-        .map(([, value]) => value as string);
-    const status: CodexaLensFileStatus = failed
-        ? "failed"
-        : /(?:write|edit|create|delete|remove|update)/i.test(toolName)
-          ? "modified"
-          : "inspected";
-    return {
-        id: `${toolCallId}:${phase}`,
-        toolCallId,
-        toolName,
-        phase,
-        status,
-        filePaths,
-        timestampMs,
-        offsetMs: Math.max(0, timestampMs - sessionStartedAt),
-        ...(phase === "completed" && toolStartedAt
-            ? { durationMs: Math.max(0, timestampMs - toolStartedAt) }
-            : {}),
-        summary: `${status[0]!.toUpperCase()}${status.slice(1)} ${filePaths[0] ?? toolName}`,
-    };
+  const timestampMs = Date.now();
+  const args = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+  const filePaths = Object.entries(args)
+    .filter(([key, value]) => /^(?:path|file|filePath)$/i.test(key) && typeof value === "string")
+    .map(([, value]) => value as string);
+  const status: CodexaLensFileStatus = failed
+    ? "failed"
+    : /(?:write|edit|create|delete|remove|update)/i.test(toolName)
+      ? "modified"
+      : "inspected";
+  return {
+    id: `${toolCallId}:${phase}`,
+    toolCallId,
+    toolName,
+    phase,
+    status,
+    filePaths,
+    timestampMs,
+    offsetMs: Math.max(0, timestampMs - sessionStartedAt),
+    ...(phase === "completed" && toolStartedAt
+      ? { durationMs: Math.max(0, timestampMs - toolStartedAt) }
+      : {}),
+    summary: `${status[0]!.toUpperCase()}${status.slice(1)} ${filePaths[0] ?? toolName}`,
+  };
 }
+
+export type ChatUsage = Pick<LanguageModelUsage, "inputTokens" | "outputTokens" | "totalTokens">;
 
 export type ChatMessageMetadata = {
-    mode?: ModeType;
-    model?: SupportedChatModelId | string;
-    durationMs?: number;
-    usage?: LanguageModelUsage;
-}
+  mode?: ModeType;
+  model?: SupportedChatModelId | string;
+  durationMs?: number;
+  usage?: ChatUsage;
+};
 
 type ChatTools = {
-    [Name in keyof InferUITools<ToolContracts>]: {
-        input: InferUITools<ToolContracts>[Name]['input'],
-        output: unknown;
-    }
-}
+  [Name in keyof InferUITools<ToolContracts>]: {
+    input: InferUITools<ToolContracts>[Name]["input"];
+    output: unknown;
+  };
+};
 
 export type Message = UIMessage<ChatMessageMetadata, never, ChatTools>;
 
 export function useChat(
-    sessionId: string,
-    initialMessages: Message[],
-    options?: { askConfirmation?: (toolName: string, details: string) => Promise<boolean> }
+  sessionId: string,
+  initialMessages: Message[],
+  options?: { askConfirmation?: (toolName: string, details: string) => Promise<boolean> },
 ) {
-    const { recordActivity } = useCodexaLens();
-    const sessionStartedAt = useRef(Date.now());
-    const toolStartedAt = useRef(new Map<string, number>());
-    // Assistant tool-call messages do not reliably retain the originating
-    // user metadata. Keep the active turn's mode separately so PLAN mode
-    // cannot accidentally execute BUILD-only tools.
-    const activeMode = useRef<ModeType>(
-        initialMessages.findLast((message) => message.metadata?.mode)?.metadata?.mode ?? "BUILD",
-    );
-    const transport = useMemo(() => {
-        return new DefaultChatTransport<Message>({
-            api: apiClient.chat.$url().toString(),
-            headers() {
-                const auth = getAuth();
-                const headers = new Headers();
-                if (auth) {
-                    headers.set("Authorization", `Bearer ${auth.token}`);
-                }
-                const storedKeys = getAllApiKeys();
-                if (storedKeys.anthropic) {
-                    headers.set("X-Anthropic-Key", storedKeys.anthropic);
-                }
-                if (storedKeys.openai) {
-                    headers.set("X-OpenAI-Key", storedKeys.openai);
-                }
-                if (storedKeys.google) {
-                    headers.set("X-Google-Key", storedKeys.google);
-                }
-                if (storedKeys.groq) {
-                    headers.set("X-Groq-Key", storedKeys.groq);
-                }
-                return headers;
-            },
-            prepareSendMessagesRequest({ messages }) {
-                const message = messages[messages.length - 1];
-                if (!message) throw new Error("No messages to send");
+  const { recordActivity } = useCodexaLens();
+  const sessionStartedAt = useRef(Date.now());
+  const toolStartedAt = useRef(new Map<string, number>());
+  // Assistant tool-call messages do not reliably retain the originating
+  // user metadata. Keep the active turn's mode separately so PLAN mode
+  // cannot accidentally execute BUILD-only tools.
+  const activeMode = useRef<ModeType>(
+    initialMessages.findLast((message) => message.metadata?.mode)?.metadata?.mode ?? "BUILD",
+  );
+  const transport = useMemo(() => {
+    return new DefaultChatTransport<Message>({
+      api: apiClient.chat.$url().toString(),
+      headers() {
+        const auth = getAuth();
+        const headers = new Headers();
+        if (auth) {
+          headers.set("Authorization", `Bearer ${auth.token}`);
+        }
+        const storedKeys = getAllApiKeys();
+        if (storedKeys.anthropic) {
+          headers.set("X-Anthropic-Key", storedKeys.anthropic);
+        }
+        if (storedKeys.openai) {
+          headers.set("X-OpenAI-Key", storedKeys.openai);
+        }
+        if (storedKeys.google) {
+          headers.set("X-Google-Key", storedKeys.google);
+        }
+        if (storedKeys.groq) {
+          headers.set("X-Groq-Key", storedKeys.groq);
+        }
+        return headers;
+      },
+      prepareSendMessagesRequest({ messages }) {
+        const message = messages[messages.length - 1];
+        if (!message) throw new Error("No messages to send");
 
-                const metadata = messages.findLast(
-                    (m) => m.metadata?.mode && m.metadata?.model
-                )?.metadata;
+        const metadata = messages.findLast((m) => m.metadata?.mode && m.metadata?.model)?.metadata;
 
-                const rules = getProjectRules();
-                const projInfo = detectProject();
-                const projectContext = {
-                    ...projInfo,
-                    projectRules: rules,
-                };
+        const rules = getProjectRules();
+        const projInfo = detectProject();
+        const projectContext = {
+          ...projInfo,
+          projectRules: rules,
+        };
 
-                return {
-                    body: {
-                        id: sessionId,
-                        messages,
-                        mode: message.metadata?.mode || metadata?.mode,
-                        model: message.metadata?.model || metadata?.model,
-                        projectContext,
-                    },
-                };
-            }
-        })
-    }, [sessionId]);
-
-    const chat = useAiChat<Message>({
-        id: sessionId,
-        messages: initialMessages,
-        transport,
-        onToolCall({ toolCall }) {
-            const mode = activeMode.current;
-            const autoApproved = shouldAutoApproveTool(toolCall.toolName, toolCall.input, cliArgs.autoApprove, mode);
-            const formatToolArgsString = (tc: any): string => {
-                if (!tc.input) return "";
-                if (typeof tc.input !== "object") return String(tc.input);
-                return Object.entries(tc.input).map(([k, v]) => `${k}: ${v}`).join(", ");
-            };
-            const proceedPromise = !autoApproved && options?.askConfirmation
-                ? options.askConfirmation(toolCall.toolName, formatToolArgsString(toolCall))
-                : Promise.resolve(true);
-
-            proceedPromise.then((allowed) => {
-                if (!allowed) {
-                    throw new Error("Tool execution cancelled by user");
-                }
-
-                // Snapshots before modifying files
-                if (["writeFile", "editFile", "deleteFile", "moveFile"].includes(toolCall.toolName)) {
-                    const inputObj = toolCall.input as any;
-                    const filePathsToSnapshot = [];
-                    if (inputObj.path) filePathsToSnapshot.push(inputObj.path);
-                    if (inputObj.from) filePathsToSnapshot.push(inputObj.from);
-
-                    for (const relativePath of filePathsToSnapshot) {
-                        try {
-                            const absolutePath = resolve(process.cwd(), relativePath);
-                            saveFileSnapshot(sessionId, relativePath, absolutePath);
-                        } catch {
-                            // ignore snapshot failures
-                        }
-                    }
-                }
-
-                const startedAt = Date.now();
-                toolStartedAt.current.set(toolCall.toolCallId, startedAt);
-                recordActivity(sessionId, activityEvent(
-                    toolCall.toolCallId,
-                    toolCall.toolName,
-                    toolCall.input,
-                    "started",
-                    false,
-                    sessionStartedAt.current,
-                ));
-
-                return executeLocalTool(toolCall.toolName, toolCall.input, mode);
-            })
-            .then((output) => {
-                recordActivity(sessionId, activityEvent(
-                    toolCall.toolCallId,
-                    toolCall.toolName,
-                    toolCall.input,
-                    "completed",
-                    false,
-                    sessionStartedAt.current,
-                    toolStartedAt.current.get(toolCall.toolCallId),
-                ));
-                toolStartedAt.current.delete(toolCall.toolCallId);
-                return chat.addToolOutput({
-                    tool: toolCall.toolName as keyof ChatTools,
-                    toolCallId: toolCall.toolCallId,
-                    output,
-                });
-            })
-            .catch((error) => {
-                recordActivity(sessionId, activityEvent(
-                    toolCall.toolCallId,
-                    toolCall.toolName,
-                    toolCall.input,
-                    "completed",
-                    true,
-                    sessionStartedAt.current,
-                    toolStartedAt.current.get(toolCall.toolCallId),
-                ));
-                toolStartedAt.current.delete(toolCall.toolCallId);
-                return chat.addToolOutput({
-                    tool: toolCall.toolName as keyof ChatTools,
-                    toolCallId: toolCall.toolCallId,
-                    state: "output-error",
-                    errorText: error instanceof Error ? error.message : String(error),
-                });
-            });
-        },
-        sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls
+        return {
+          body: {
+            id: sessionId,
+            messages,
+            mode: message.metadata?.mode || metadata?.mode,
+            model: message.metadata?.model || metadata?.model,
+            projectContext,
+          },
+        };
+      },
     });
-    return {
-        messages: chat.messages,
-        status: chat.status,
-        error: chat.error,
-        submit: (params: { userText: string; mode: ModeType; model: SupportedChatModelId}) => {
-            activeMode.current = params.mode;
-            return chat.sendMessage({
-                text: params.userText,
-                metadata: {
-                    mode: params.mode,
-                    model: params.model,
-                },
-            })
+  }, [sessionId]);
+
+  const chat = useAiChat<Message>({
+    id: sessionId,
+    messages: initialMessages,
+    transport,
+    onToolCall({ toolCall }) {
+      const mode = activeMode.current;
+      const autoApproved = shouldAutoApproveTool(
+        toolCall.toolName,
+        toolCall.input,
+        cliArgs.autoApprove,
+        mode,
+      );
+      const formatToolArgsString = (tc: any): string => {
+        if (!tc.input) return "";
+        if (typeof tc.input !== "object") return String(tc.input);
+        return Object.entries(tc.input)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(", ");
+      };
+      const proceedPromise =
+        !autoApproved && options?.askConfirmation
+          ? options.askConfirmation(toolCall.toolName, formatToolArgsString(toolCall))
+          : Promise.resolve(true);
+
+      proceedPromise
+        .then((allowed) => {
+          if (!allowed) {
+            throw new Error("Tool execution cancelled by user");
+          }
+
+          // Snapshots before modifying files
+          if (["writeFile", "editFile", "deleteFile", "moveFile"].includes(toolCall.toolName)) {
+            const inputObj = toolCall.input as any;
+            const filePathsToSnapshot = [];
+            if (inputObj.path) filePathsToSnapshot.push(inputObj.path);
+            if (inputObj.from) filePathsToSnapshot.push(inputObj.from);
+
+            for (const relativePath of filePathsToSnapshot) {
+              try {
+                const absolutePath = resolve(process.cwd(), relativePath);
+                saveFileSnapshot(sessionId, relativePath, absolutePath);
+              } catch {
+                // ignore snapshot failures
+              }
+            }
+          }
+
+          const startedAt = Date.now();
+          toolStartedAt.current.set(toolCall.toolCallId, startedAt);
+          recordActivity(
+            sessionId,
+            activityEvent(
+              toolCall.toolCallId,
+              toolCall.toolName,
+              toolCall.input,
+              "started",
+              false,
+              sessionStartedAt.current,
+            ),
+          );
+
+          return executeLocalTool(toolCall.toolName, toolCall.input, mode);
+        })
+        .then((output) => {
+          recordActivity(
+            sessionId,
+            activityEvent(
+              toolCall.toolCallId,
+              toolCall.toolName,
+              toolCall.input,
+              "completed",
+              false,
+              sessionStartedAt.current,
+              toolStartedAt.current.get(toolCall.toolCallId),
+            ),
+          );
+          toolStartedAt.current.delete(toolCall.toolCallId);
+          return chat.addToolOutput({
+            tool: toolCall.toolName as keyof ChatTools,
+            toolCallId: toolCall.toolCallId,
+            output,
+          });
+        })
+        .catch((error) => {
+          recordActivity(
+            sessionId,
+            activityEvent(
+              toolCall.toolCallId,
+              toolCall.toolName,
+              toolCall.input,
+              "completed",
+              true,
+              sessionStartedAt.current,
+              toolStartedAt.current.get(toolCall.toolCallId),
+            ),
+          );
+          toolStartedAt.current.delete(toolCall.toolCallId);
+          return chat.addToolOutput({
+            tool: toolCall.toolName as keyof ChatTools,
+            toolCallId: toolCall.toolCallId,
+            state: "output-error",
+            errorText: error instanceof Error ? error.message : String(error),
+          });
+        });
+    },
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+  });
+  return {
+    messages: chat.messages,
+    status: chat.status,
+    error: chat.error,
+    submit: (params: { userText: string; mode: ModeType; model: SupportedChatModelId }) => {
+      activeMode.current = params.mode;
+      return chat.sendMessage({
+        text: params.userText,
+        metadata: {
+          mode: params.mode,
+          model: params.model,
         },
-        abort: chat.stop,
-        interrupt: chat.stop,
-    };
+      });
+    },
+    abort: chat.stop,
+    interrupt: chat.stop,
+  };
 }

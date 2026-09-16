@@ -13,7 +13,10 @@ import { SessionShell } from "../components/session-shell";
 import type { Message } from "../hooks/use-chat";
 import { useLocalAgentChat } from "../hooks/use-local-agent-chat";
 import { apiClient } from "../lib/api-client";
+import { hasApiKey } from "../lib/api-keys";
 import { getErrorMessage } from "../lib/http-errors";
+import { getProviderForModel } from "../lib/model-utils";
+import { recommendTaskModel } from "../lib/task-model-router";
 import { useDialog } from "../providers/dialog";
 import { useKeyboardLayer } from "../providers/keyboard-layer";
 import { usePromptConfig } from "../providers/prompt-config";
@@ -113,6 +116,30 @@ function SessionChat({
     useLocalAgentChat({ askConfirmation, approvePlan });
   const hasSubmittedInitialPromptRef = useRef(false);
 
+  const submitWithRouting = useCallback(
+    (text: string) => {
+      const availableModels = SUPPORTED_CHAT_MODELS.filter((candidate) =>
+        hasApiKey(getProviderForModel(candidate.id)),
+      ).map((candidate) => candidate.id);
+      const recommendation = recommendTaskModel(text, mode, availableModels, model);
+      const providerCount = new Set(availableModels.map(getProviderForModel)).size;
+      const start = (selectedModel: SupportedChatModelId) => {
+        setModel(selectedModel);
+        void submit({ userText: text, mode, model: selectedModel });
+      };
+
+      if (providerCount > 1) {
+        dialog.open({
+          title: `Choose model — recommended: ${recommendation.model}`,
+          children: <ModelsDialogContent models={availableModels} onSelectModel={start} />,
+        });
+        return;
+      }
+      start(recommendation.model);
+    },
+    [dialog, mode, model, setModel, submit],
+  );
+
   // Stop the pending reply when the user leaves this session.
   useEffect(() => {
     return () => void abort();
@@ -149,9 +176,7 @@ function SessionChat({
 
   return (
     <SessionShell
-      onSubmit={(text) => {
-        submit({ userText: text, mode, model });
-      }}
+      onSubmit={submitWithRouting}
       loading={status === "streaming"}
       interruptible={status === "streaming"}
       onClear={clear}
