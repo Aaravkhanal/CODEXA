@@ -1,5 +1,11 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
-import {
+import { describe, expect, it } from "bun:test";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+process.env.CODEXA_CONFIG_DIR = mkdtempSync(join(tmpdir(), "codexa-config-test-"));
+
+const {
   saveGlobalConfig,
   getGlobalConfig,
   saveProfile,
@@ -8,7 +14,7 @@ import {
   getCredentials,
   getAllProfiles,
   deleteProfile,
-} from "../src/lib/global-config.ts";
+} = await import("../src/lib/global-config.ts");
 
 describe("Global Config & Profile Management", () => {
   it("saves and retrieves global config", () => {

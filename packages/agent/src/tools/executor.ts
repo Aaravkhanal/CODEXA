@@ -22,7 +22,7 @@ import {
   unlink,
   rename,
 } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
@@ -65,11 +65,27 @@ export type AgentTools = ReturnType<typeof createAgentTools>;
 // Helpers
 // ---------------------------------------------------------------------------
 
-function resolveInsideCwd(cwd: string, path: string) {
+export function resolveInsideCwd(cwd: string, path: string) {
   const resolved = resolve(cwd, path);
   const rel = relative(cwd, resolved);
   if (rel.startsWith("..") || isAbsolute(rel)) {
     throw new Error(`Path "${path}" is outside the project directory`);
+  }
+
+  // Lexical checks alone are insufficient: an in-project symlink may point
+  // outside the selected project. Resolve the target (or its nearest existing
+  // parent for a new path) before authorising an operation.
+  const realCwd = realpathSync(cwd);
+  let existingPath = resolved;
+  while (!existsSync(existingPath)) {
+    const parent = dirname(existingPath);
+    if (parent === existingPath) break;
+    existingPath = parent;
+  }
+  const realExistingPath = realpathSync(existingPath);
+  const realRel = relative(realCwd, realExistingPath);
+  if (realRel.startsWith("..") || isAbsolute(realRel)) {
+    throw new Error(`Path "${path}" resolves outside the project directory`);
   }
   return resolved;
 }

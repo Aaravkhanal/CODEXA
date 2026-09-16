@@ -1,5 +1,5 @@
 import { mkdir, readFile, readdir, stat, writeFile, unlink, rename } from "fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "path";
 import { toolInputSchemas, Mode, type ModeType } from "@codexa/shared";
 import { execSync } from "node:child_process";
@@ -14,13 +14,28 @@ const DEFAULT_TIMEOUT = 30_000;
 
 const IS_WINDOWS = process.platform === "win32";
 
-function resolveInsideCwd(path: string) {
-  const cwd = process.cwd();
+export function resolveInsideCwd(path: string, cwd: string = process.cwd()) {
   const resolved = resolve(cwd, path);
   const rel = relative(cwd, resolved);
 
   if (rel.startsWith("..") || isAbsolute(rel)) {
     throw new Error("Path is outside the project directory");
+  }
+
+  // Reject paths that leave the project via a symlink as well as direct
+  // traversal. For files that do not exist yet, validate the nearest existing
+  // parent so creating `linked-dir/file.ts` cannot escape the workspace.
+  const realCwd = realpathSync(cwd);
+  let existingPath = resolved;
+  while (!existsSync(existingPath)) {
+    const parent = dirname(existingPath);
+    if (parent === existingPath) break;
+    existingPath = parent;
+  }
+  const realExistingPath = realpathSync(existingPath);
+  const realRel = relative(realCwd, realExistingPath);
+  if (realRel.startsWith("..") || isAbsolute(realRel)) {
+    throw new Error("Path resolves outside the project directory");
   }
 
   return { cwd, resolved };

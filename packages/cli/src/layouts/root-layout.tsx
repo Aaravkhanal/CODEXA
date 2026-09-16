@@ -12,15 +12,15 @@ export function RootLayout() {
         <ThemeProvider>
             <ToastProvider>
                 <KeyboardLayerProvider>
-                    <CodexaLensProvider>
-                        <DialogProvider>
-                            <PromptConfigProvider>
+                    <PromptConfigProvider>
+                        <CodexaLensProvider>
+                            <DialogProvider>
                                 <ThemedRoot>
                                     <Outlet />
                                 </ThemedRoot>
-                            </PromptConfigProvider>
-                        </DialogProvider>
-                    </CodexaLensProvider>
+                            </DialogProvider>
+                        </CodexaLensProvider>
+                    </PromptConfigProvider>
                 </KeyboardLayerProvider>
             </ToastProvider>
         </ThemeProvider>

@@ -2,6 +2,10 @@ import { describe, expect, it } from "bun:test";
 import { isDockerAvailable, resolveSandboxConfig } from "../src/lib/sandbox";
 import { evaluateCommandPermission, shouldAutoApproveTool } from "../src/lib/permission-manager";
 import { Mode } from "@codexa/shared";
+import { mkdtempSync, mkdirSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { resolveInsideCwd } from "../src/lib/local-tools";
 
 describe("Phase 2 — Sandboxed Execution & Per-Command Policy", () => {
   it("checks Docker availability", () => {
@@ -34,5 +38,13 @@ describe("Phase 2 — Sandboxed Execution & Per-Command Policy", () => {
     expect(config.network).toBe("none");
     expect(config.cpus).toBe("2");
     expect(config.memory).toBe("2g");
+  });
+
+  it("rejects filesystem paths that escape through a symlink", () => {
+    const root = mkdtempSync(join(tmpdir(), "codexa-sandbox-"));
+    const outside = mkdtempSync(join(tmpdir(), "codexa-outside-"));
+    mkdirSync(join(root, "project"));
+    symlinkSync(outside, join(root, "project", "linked"));
+    expect(() => resolveInsideCwd("linked/escaped.txt", join(root, "project"))).toThrow("resolves outside");
   });
 });

@@ -4,25 +4,30 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
+import { getCodexaDir } from "./global-config";
 
-const CONFIG_DIR = join(homedir(), ".codexa");
-const KEYS_FILE = join(CONFIG_DIR, "api-keys.json");
-const CREDS_FILE = join(CONFIG_DIR, "credentials.json");
+function keysFile(): string {
+  return join(getCodexaDir(), "api-keys.json");
+}
+
+function credentialsFile(): string {
+  return join(getCodexaDir(), "credentials.json");
+}
 
 type StoredKeys = Record<string, string>; // provider -> api key
 
 function ensureConfigDir() {
-  if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
+  const configDir = getCodexaDir();
+  if (!existsSync(configDir)) {
+    mkdirSync(configDir, { recursive: true, mode: 0o700 });
   }
 }
 
 function loadLegacyKeys(): StoredKeys {
   try {
-    if (existsSync(KEYS_FILE)) {
-      const raw = readFileSync(KEYS_FILE, "utf-8");
+    if (existsSync(keysFile())) {
+      const raw = readFileSync(keysFile(), "utf-8");
       return JSON.parse(raw) as StoredKeys;
     }
   } catch {}
@@ -31,8 +36,8 @@ function loadLegacyKeys(): StoredKeys {
 
 function loadCredentialsKeys(): StoredKeys {
   try {
-    if (existsSync(CREDS_FILE)) {
-      const raw = readFileSync(CREDS_FILE, "utf-8");
+    if (existsSync(credentialsFile())) {
+      const raw = readFileSync(credentialsFile(), "utf-8");
       const creds = JSON.parse(raw) as Record<string, { provider?: string; apiKey?: string }>;
       const result: StoredKeys = {};
       for (const entry of Object.values(creds)) {
@@ -58,7 +63,7 @@ function getEnvKey(provider: string): string | null {
 
 function saveKeys(keys: StoredKeys): void {
   ensureConfigDir();
-  writeFileSync(KEYS_FILE, JSON.stringify(keys, null, 2), { mode: 0o600 });
+  writeFileSync(keysFile(), JSON.stringify(keys, null, 2), { mode: 0o600 });
 }
 
 export function getApiKey(provider: string): string | null {
@@ -84,14 +89,14 @@ export function setApiKey(provider: string, key: string): void {
 
   // Also sync to credentials.json if present
   try {
-    const credsRaw = existsSync(CREDS_FILE) ? readFileSync(CREDS_FILE, "utf-8") : "{}";
+    const credsRaw = existsSync(credentialsFile()) ? readFileSync(credentialsFile(), "utf-8") : "{}";
     const creds = JSON.parse(credsRaw) as Record<string, any>;
     creds[provider] = {
       ...(creds[provider] || {}),
       provider,
       apiKey: key,
     };
-    writeFileSync(CREDS_FILE, JSON.stringify(creds, null, 2), { mode: 0o600 });
+    writeFileSync(credentialsFile(), JSON.stringify(creds, null, 2), { mode: 0o600 });
   } catch {}
 }
 
@@ -101,11 +106,11 @@ export function removeApiKey(provider: string): void {
   saveKeys(keys);
 
   try {
-    if (existsSync(CREDS_FILE)) {
-      const credsRaw = readFileSync(CREDS_FILE, "utf-8");
+    if (existsSync(credentialsFile())) {
+      const credsRaw = readFileSync(credentialsFile(), "utf-8");
       const creds = JSON.parse(credsRaw) as Record<string, any>;
       delete creds[provider];
-      writeFileSync(CREDS_FILE, JSON.stringify(creds, null, 2), { mode: 0o600 });
+      writeFileSync(credentialsFile(), JSON.stringify(creds, null, 2), { mode: 0o600 });
     }
   } catch {}
 }

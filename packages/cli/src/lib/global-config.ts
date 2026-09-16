@@ -19,17 +19,27 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import type { ProviderName } from "@codexa/agent";
 
 // ---------------------------------------------------------------------------
 // Paths
 // ---------------------------------------------------------------------------
 
-export const CODEXA_DIR = join(homedir(), ".codexa");
-const CONFIG_FILE = join(CODEXA_DIR, "config.json");
-const CREDENTIALS_FILE = join(CODEXA_DIR, "credentials.json");
-const PROFILES_FILE = join(CODEXA_DIR, "profiles.json");
+/**
+ * The user configuration directory. CODEXA_CONFIG_DIR is intentionally
+ * supported for CI, sandboxes, and portable installations; normal installs
+ * continue to use ~/.codexa.
+ */
+export const CODEXA_DIR = resolve(process.env.CODEXA_CONFIG_DIR || join(homedir(), ".codexa"));
+
+export function getCodexaDir(): string {
+  return resolve(process.env.CODEXA_CONFIG_DIR || join(homedir(), ".codexa"));
+}
+
+function configFile(name: string): string {
+  return join(getCodexaDir(), name);
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -72,12 +82,13 @@ export type ProfilesStore = Record<string, Profile>; // keyed by profile name
 // ---------------------------------------------------------------------------
 
 export function ensureCodesxaDir(): void {
-  if (!existsSync(CODEXA_DIR)) {
-    mkdirSync(CODEXA_DIR, { recursive: true, mode: 0o700 });
+  const configDir = getCodexaDir();
+  if (!existsSync(configDir)) {
+    mkdirSync(configDir, { recursive: true, mode: 0o700 });
   }
   // Ensure sub-directories exist
   for (const sub of ["sessions", "cache", "logs"]) {
-    const subDir = join(CODEXA_DIR, sub);
+    const subDir = join(configDir, sub);
     if (!existsSync(subDir)) {
       mkdirSync(subDir, { recursive: true, mode: 0o700 });
     }
@@ -90,7 +101,7 @@ export function ensureCodesxaDir(): void {
 
 function readConfig(): Partial<GlobalConfig> {
   try {
-    return JSON.parse(readFileSync(CONFIG_FILE, "utf-8")) as Partial<GlobalConfig>;
+    return JSON.parse(readFileSync(configFile("config.json"), "utf-8")) as Partial<GlobalConfig>;
   } catch {
     return {};
   }
@@ -98,7 +109,7 @@ function readConfig(): Partial<GlobalConfig> {
 
 function writeConfig(config: GlobalConfig): void {
   ensureCodesxaDir();
-  writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 });
+  writeFileSync(configFile("config.json"), JSON.stringify(config, null, 2), { mode: 0o600 });
 }
 
 export function getGlobalConfig(): GlobalConfig | null {
@@ -125,7 +136,7 @@ export function isFirstRun(): boolean {
 
   // Check legacy api-keys.json — if any provider key exists, skip wizard
   try {
-    const legacyFile = join(CODEXA_DIR, "api-keys.json");
+    const legacyFile = configFile("api-keys.json");
     if (existsSync(legacyFile)) {
       const legacy = JSON.parse(readFileSync(legacyFile, "utf-8")) as Record<string, string>;
       if (Object.values(legacy).some(Boolean)) return false;
@@ -153,7 +164,7 @@ export function isFirstRun(): boolean {
 
 function readCredentials(): CredentialsStore {
   try {
-    return JSON.parse(readFileSync(CREDENTIALS_FILE, "utf-8")) as CredentialsStore;
+    return JSON.parse(readFileSync(configFile("credentials.json"), "utf-8")) as CredentialsStore;
   } catch {
     return {};
   }
@@ -161,7 +172,7 @@ function readCredentials(): CredentialsStore {
 
 function writeCredentials(store: CredentialsStore): void {
   ensureCodesxaDir();
-  writeFileSync(CREDENTIALS_FILE, JSON.stringify(store, null, 2), { mode: 0o600 });
+  writeFileSync(configFile("credentials.json"), JSON.stringify(store, null, 2), { mode: 0o600 });
 }
 
 export function getCredentials(profileName: string): ProviderCredentials | null {
@@ -187,7 +198,7 @@ export function deleteCredentials(profileName: string): void {
 
 function readProfiles(): ProfilesStore {
   try {
-    return JSON.parse(readFileSync(PROFILES_FILE, "utf-8")) as ProfilesStore;
+    return JSON.parse(readFileSync(configFile("profiles.json"), "utf-8")) as ProfilesStore;
   } catch {
     return {};
   }
@@ -195,7 +206,7 @@ function readProfiles(): ProfilesStore {
 
 function writeProfiles(store: ProfilesStore): void {
   ensureCodesxaDir();
-  writeFileSync(PROFILES_FILE, JSON.stringify(store, null, 2), { mode: 0o600 });
+  writeFileSync(configFile("profiles.json"), JSON.stringify(store, null, 2), { mode: 0o600 });
 }
 
 export function getProfile(name: string): Profile | null {
@@ -282,7 +293,7 @@ function getEnvKeyForProvider(provider: ProviderName): string | undefined {
  * Runs automatically on first access after an upgrade.
  */
 export function migrateFromLegacyApiKeys(): void {
-  const legacyFile = join(CODEXA_DIR, "api-keys.json");
+  const legacyFile = configFile("api-keys.json");
   if (!existsSync(legacyFile)) return;
 
   try {
@@ -312,7 +323,7 @@ export function migrateFromLegacyApiKeys(): void {
         writeProfiles(store);
 
         // Create global config
-        if (!existsSync(CONFIG_FILE)) {
+        if (!existsSync(configFile("config.json"))) {
           writeConfig({
             version: 1,
             activeProfile: "default",
@@ -330,7 +341,7 @@ export function migrateFromLegacyApiKeys(): void {
 
     // Rename legacy file to avoid re-migration
     const { renameSync } = require("node:fs");
-    renameSync(legacyFile, join(CODEXA_DIR, "api-keys.json.bak"));
+    renameSync(legacyFile, configFile("api-keys.json.bak"));
   } catch {
     // Migration failure is non-fatal
   }

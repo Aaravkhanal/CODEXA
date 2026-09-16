@@ -1,5 +1,11 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { getApiKey, setApiKey, removeApiKey, getAllApiKeys, hasApiKey } from "./api-keys";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+process.env.CODEXA_CONFIG_DIR = mkdtempSync(join(tmpdir(), "codexa-api-keys-test-"));
+
+const { getApiKey, setApiKey, removeApiKey, getAllApiKeys, hasApiKey } = await import("./api-keys");
 
 describe("API Keys Storage", () => {
   const testProvider = "test_provider_unit_test";

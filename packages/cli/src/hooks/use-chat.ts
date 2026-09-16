@@ -85,6 +85,12 @@ export function useChat(
     const { recordActivity } = useCodexaLens();
     const sessionStartedAt = useRef(Date.now());
     const toolStartedAt = useRef(new Map<string, number>());
+    // Assistant tool-call messages do not reliably retain the originating
+    // user metadata. Keep the active turn's mode separately so PLAN mode
+    // cannot accidentally execute BUILD-only tools.
+    const activeMode = useRef<ModeType>(
+        initialMessages.findLast((message) => message.metadata?.mode)?.metadata?.mode ?? "BUILD",
+    );
     const transport = useMemo(() => {
         return new DefaultChatTransport<Message>({
             api: apiClient.chat.$url().toString(),
@@ -142,8 +148,8 @@ export function useChat(
         messages: initialMessages,
         transport,
         onToolCall({ toolCall }) {
-            const mode = chat.messages.at(-1)?.metadata?.mode ?? "BUILD";
-            const autoApproved = shouldAutoApproveTool(toolCall.toolName, toolCall.input, cliArgs.autoApprove);
+            const mode = activeMode.current;
+            const autoApproved = shouldAutoApproveTool(toolCall.toolName, toolCall.input, cliArgs.autoApprove, mode);
             const formatToolArgsString = (tc: any): string => {
                 if (!tc.input) return "";
                 if (typeof tc.input !== "object") return String(tc.input);
@@ -231,6 +237,7 @@ export function useChat(
         status: chat.status,
         error: chat.error,
         submit: (params: { userText: string; mode: ModeType; model: SupportedChatModelId}) => {
+            activeMode.current = params.mode;
             return chat.sendMessage({
                 text: params.userText,
                 metadata: {
