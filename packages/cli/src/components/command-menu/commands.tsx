@@ -26,8 +26,25 @@ export const COMMANDS: Command[] = [
     value: "/help",
     action: (ctx) => {
       ctx.toast.show({
-        message: "CodeXA Commands: /model, /models, /memory, /context, /diff, /undo, /sessions, /config, /exit",
+        message: "Commands: /model, /apikey, /plan, /build, /loop, /compact, /status, /diff, /undo, /exit",
       });
+    },
+  },
+  {
+    name: "loop",
+    description: "Continue an implementation loop with tests and fixes",
+    value: "/loop",
+    action: (ctx) => {
+      ctx.setText?.("Continue the current task. Run the relevant tests, fix any failures, and report the result.");
+      ctx.toast.show({ message: "Loop prompt prepared. Add context if needed, then press Enter." });
+    },
+  },
+  {
+    name: "compact",
+    description: "Save the current task summary to project memory",
+    value: "/compact",
+    action: (ctx) => {
+      ctx.submit?.("Summarize the current work concisely, record reusable findings in .codexa/memory.md, and do not make unrelated code changes.");
     },
   },
   {

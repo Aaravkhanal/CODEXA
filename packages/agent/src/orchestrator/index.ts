@@ -373,7 +373,7 @@ export class AgentOrchestrator {
       `Project files:\n${contextBlock}`,
     ].filter(Boolean).join("\n\n");
 
-    await (generateText as any)({
+    const { usage } = await (generateText as any)({
       model: this.model,
       system: CODER_SYSTEM_PROMPT,
       tools: this.tools,
@@ -390,6 +390,7 @@ export class AgentOrchestrator {
         }
       },
     });
+    this.totalTokensUsed += (usage?.totalTokens ?? 0);
 
     return { filesModified };
   }
@@ -460,7 +461,7 @@ export class AgentOrchestrator {
       .map((f) => `\`\`\`${getFileExtension(f.path)}\n// ${f.path}\n${f.content}\n\`\`\``)
       .join("\n\n");
 
-    await (generateText as any)({
+    const { usage } = await (generateText as any)({
       model: this.model,
       system: DEBUGGER_SYSTEM_PROMPT,
       tools: this.tools,
@@ -477,6 +478,7 @@ export class AgentOrchestrator {
         }
       },
     });
+    this.totalTokensUsed += (usage?.totalTokens ?? 0);
 
     return { filesModified };
   }

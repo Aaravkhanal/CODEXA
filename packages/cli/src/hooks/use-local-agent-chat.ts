@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { AgentOrchestrator, type ProviderConfig } from "@codexa/agent";
+import { AgentOrchestrator, createLanguageModel, type ProviderConfig } from "@codexa/agent";
+import { generateText } from "ai";
 import type { ModeType, SupportedChatModelId } from "@codexa/shared";
 import { getApiKey } from "../lib/api-keys";
 import { getProviderForModel } from "../lib/model-utils";
@@ -19,6 +20,11 @@ function message(id: string, role: "user" | "assistant", text: string, metadata:
     parts: [{ type: "text", text }],
     metadata: { mode: metadata.mode, model: metadata.model },
   } as Message;
+}
+
+function isSimpleConversation(text: string): boolean {
+  const normalized = text.trim().toLowerCase();
+  return normalized.length <= 220 && /^(hi|hello|hey|thanks|thank you|who are you|what can you do|how are you|good morning|good evening)\b/.test(normalized);
 }
 
 /**
@@ -46,20 +52,47 @@ export function useLocalAgentChat(options?: {
     setStatus("streaming");
 
     try {
-      const agent = new AgentOrchestrator({
-        cwd: process.cwd(),
-        providerConfig: { provider, apiKey, model: params.model } as ProviderConfig,
-        autoApprove: cliArgs.autoApprove,
-        onConfirmDangerous: async (command, reason) =>
-          options?.askConfirmation?.(command, reason) ?? false,
-      });
-      const result = await agent.run(params.userText);
-      const summary = result.success
-        ? result.summary || "Task completed successfully."
-        : `Task failed: ${result.summary}`;
+      const providerConfig = { provider, apiKey, model: params.model } as ProviderConfig;
+      let summary: string;
+      let totalTokensUsed: number;
+      let durationMs: number;
+
+      if (isSimpleConversation(params.userText)) {
+        const startedAt = Date.now();
+        const response = await generateText({
+          model: createLanguageModel(providerConfig),
+          system: "You are CODEXA, a concise and helpful coding assistant.",
+          prompt: params.userText,
+        });
+        summary = response.text;
+        totalTokensUsed = response.usage.totalTokens ?? 0;
+        durationMs = Date.now() - startedAt;
+      } else {
+        const agent = new AgentOrchestrator({
+          cwd: process.cwd(),
+          providerConfig,
+          autoApprove: cliArgs.autoApprove,
+          onConfirmDangerous: async (command, reason) =>
+            options?.askConfirmation?.(command, reason) ?? false,
+        });
+        const result = await agent.run(params.userText);
+        summary = result.success
+          ? result.summary || "Task completed successfully."
+          : `Task failed: ${result.summary}`;
+        totalTokensUsed = result.totalTokensUsed;
+        durationMs = result.durationMs;
+      }
       setMessages((current) => [
         ...current,
-        message(`${turnId}:assistant`, "assistant", summary, params),
+        {
+          ...message(`${turnId}:assistant`, "assistant", summary, params),
+          metadata: {
+            mode: params.mode,
+            model: params.model,
+            usage: { totalTokens: totalTokensUsed } as any,
+            durationMs,
+          },
+        } as Message,
       ]);
     } catch (cause) {
       setError(cause instanceof Error ? cause : new Error(String(cause)));

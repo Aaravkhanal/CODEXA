@@ -17,6 +17,23 @@ import { cliArgs } from "../lib/cli-args";
 import { getProviderForModel } from "../lib/model-utils";
 import { ProjectMemoryManager } from "@codexa/agent";
 
+function configuredModels() {
+  return SUPPORTED_CHAT_MODELS
+    .filter((candidate) => hasApiKey(getProviderForModel(candidate.id)))
+    .map((candidate) => candidate.id);
+}
+
+function recommendModel(models: ReturnType<typeof configuredModels>) {
+  return models.reduce((best, candidate) => {
+    const bestPricing = SUPPORTED_CHAT_MODELS.find((model) => model.id === best)!.pricing;
+    const candidatePricing = SUPPORTED_CHAT_MODELS.find((model) => model.id === candidate)!.pricing;
+    return candidatePricing.inputUsdPerMillionTokens + candidatePricing.outputUsdPerMillionTokens
+      < bestPricing.inputUsdPerMillionTokens + bestPricing.outputUsdPerMillionTokens
+      ? candidate
+      : best;
+  }, models[0]!);
+}
+
 export function Home() {
   const navigate = useNavigate();
   const dialog = useDialog();
@@ -127,9 +144,27 @@ export function Home() {
         });
         return;
       }
+
+      const availableModels = configuredModels();
+      if (availableModels.length > 1) {
+        const recommended = recommendModel(availableModels);
+        dialog.open({
+          title: `Choose model — recommended: ${recommended}`,
+          children: (
+            <ModelsDialogContent
+              models={availableModels}
+              onSelectModel={(selectedModel) => {
+                setModel(selectedModel);
+                navigate("/sessions/new", { state: { message: text, mode, model: selectedModel } });
+              }}
+            />
+          ),
+        });
+        return;
+      }
       navigate("/sessions/new", { state: { message: text, mode, model } });
     },
-    [navigate, mode, model, dialog],
+    [navigate, mode, model, dialog, setModel],
   );
 
   return (
@@ -292,4 +327,3 @@ export function Home() {
     </box>
   );
 }
-
