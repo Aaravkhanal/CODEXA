@@ -38,6 +38,20 @@
 npm install -g codexa
 ```
 
+### Install a standalone binary (no Node.js or Bun required)
+
+macOS/Linux:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Aaravkhanal/CODEXA/main/install.sh | sh
+```
+
+Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/Aaravkhanal/CODEXA/main/install.ps1 | iex
+```
+
 Then use it in any project directory:
 
 ```bash
@@ -153,6 +167,11 @@ Select your AI provider:
 | Slash Command | Purpose |
 | --- | --- |
 | `/help` | Show available commands and tool usage guide |
+| `/init` | Prepare a read-only setup plan for the current project |
+| `/plan` / `/build` | Switch between no-edit planning and implementation modes |
+| `/fix` / `/test` / `/review` | Prepare focused fix, verification, or review tasks |
+| `/loop` / `/compact` | Continue a verification loop or summarize project memory |
+| `/commit` / `/share` | Prepare a reviewed commit or a sanitized task summary |
 | `/model` / `/models` | Switch active AI model on the fly & add/configure provider API keys inline |
 | `/apikey` / `/config` | Configure or update API keys for providers (Anthropic, OpenAI, Google, Groq) |
 | `/memory` | Inspect, import, or export project memory (`.codexa/memory.md`) |
