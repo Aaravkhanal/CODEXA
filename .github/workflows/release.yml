@@ -26,7 +26,7 @@ jobs:
         with:
           bun-version: 1.4.x
       - name: Require release tag to point to main history
-        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+        run: git merge-base --is-ancestor "$(git rev-parse "$GITHUB_SHA^{}")" origin/main
       - run: bun install --frozen-lockfile
       - name: Require tag to match CLI version
         run: test "$GITHUB_REF_NAME" = "v$(bun -e 'console.log(require("./packages/cli/package.json").version)')"
