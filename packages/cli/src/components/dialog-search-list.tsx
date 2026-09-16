@@ -90,7 +90,7 @@ export function DialogSearchList<T>({
         <box flexDirection="column" gap={1}>
             <input
                 ref={inputRef}
-                onContentChange={handleContentChange}
+                onChange={handleContentChange}
                 focused
                 placeholder={placeholder} />
             {filtered.length === 0 ? (

@@ -23,7 +23,7 @@ import {
   rename,
 } from "node:fs/promises";
 import { existsSync, realpathSync } from "node:fs";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 // ---------------------------------------------------------------------------
@@ -388,8 +388,7 @@ export function createAgentTools(options: AgentToolsOptions) {
         }
 
         execSync("git add -A", { cwd });
-        const safeMsg = message.replace(/"/g, '\\"');
-        const stdout = execSync(`git commit -m "${safeMsg}"`, { cwd, encoding: "utf-8" });
+        const stdout = execFileSync("git", ["commit", "-m", message], { cwd, encoding: "utf-8" });
         return { success: true, commit: stdout };
       },
     }),

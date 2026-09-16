@@ -1,12 +1,13 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { createContext, useContext, useState, useCallback } from "react";
 import type { ReactNode } from "react";
 import { type ThemeColors, type Theme, THEMES, DEFAULT_THEME } from "../../theme"; 
+import { getCodexaDir } from "../../lib/global-config";
 
-const CONFIG_DIR = join(homedir(), ".codexa");
-const THEME_PREFERENCES_PATH = join(CONFIG_DIR, "preferences.json");
+function preferencesPath(): string {
+    return join(getCodexaDir(), "preferences.json");
+}
 
 type ThemePreferences = {
     themeName: string;
@@ -15,7 +16,7 @@ type ThemePreferences = {
 function getInitialTheme(): Theme {
     try {
        const preferences = JSON.parse(
-        readFileSync(THEME_PREFERENCES_PATH, "utf-8"),
+        readFileSync(preferencesPath(), "utf-8"),
        ) as Partial<ThemePreferences>;
        const savedTheme = THEMES.find((theme) => theme.name === preferences.themeName);
        return savedTheme ?? DEFAULT_THEME;
@@ -26,9 +27,9 @@ function getInitialTheme(): Theme {
 
 function persistTheme(theme: Theme) {
     try {
-        mkdirSync(CONFIG_DIR, { recursive: true });
+        mkdirSync(getCodexaDir(), { recursive: true, mode: 0o700 });
         writeFileSync(
-            THEME_PREFERENCES_PATH,
+            preferencesPath(),
             JSON.stringify({ themeName: theme.name } satisfies ThemePreferences, null, 2),
             "utf8",
         );

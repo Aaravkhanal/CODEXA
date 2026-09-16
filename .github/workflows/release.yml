@@ -58,7 +58,7 @@ jobs:
           - target: bun-windows-arm64
             artifact: windows-arm64
           - target: bun-windows-x64-baseline
-            artifact: windows-x64
+            artifact: windows-x64 
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

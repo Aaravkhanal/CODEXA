@@ -1,9 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { getAllApiKeys } from "./api-keys.ts";
 import { detectProject } from "./project-detector.ts";
-import { getGlobalConfig, getProfile, CODEXA_DIR } from "./global-config.ts";
+import { getCodexaDir, getGlobalConfig, getProfile } from "./global-config.ts";
 import { isOllamaRunning } from "@codexa/agent";
 
 // Inline minimal MCP config loader (avoids importing from packages/server)
@@ -58,7 +57,7 @@ export async function runDoctorChecks(cwd: string = process.cwd()): Promise<{
 
   // Check 2: API Keys Configuration (~/.codexa/api-keys.json)
   try {
-    const keysDir = join(homedir(), ".codexa");
+    const keysDir = getCodexaDir();
     const keysFile = join(keysDir, "api-keys.json");
     const storedKeys = getAllApiKeys();
     const envKeys = {
@@ -79,13 +78,13 @@ export async function runDoctorChecks(cwd: string = process.cwd()): Promise<{
       results.push({
         name: "API Keys Storage",
         passed: true,
-        message: `Found API keys for [${configuredProviders.join(", ")}] (${hasFile ? "~/.codexa/api-keys.json" : "environment variables"})`,
+        message: `Found API keys for [${configuredProviders.join(", ")}] (${hasFile ? `${keysFile}` : "environment variables"})`,
       });
     } else {
       results.push({
         name: "API Keys Storage",
         passed: false,
-        message: "No API keys configured in ~/.codexa/api-keys.json or environment variables",
+        message: `No API keys configured in ${keysFile} or environment variables`,
         details: [
           "Run 'codexa setup' or set ANTHROPIC_API_KEY / OPENAI_API_KEY in your environment.",
         ],

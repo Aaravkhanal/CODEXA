@@ -10,6 +10,7 @@ import { StatusBar } from "./status-bar";
 import { useNavigate, useParams } from "react-router";
 import { type KeyBinding } from "@opentui/core";
 import { CommandMenu } from "./command-menu";
+import { COMMANDS } from "./command-menu/commands";
 import type { Command } from "./command-menu/types";
 import { useCommandMenu } from "./command-menu/use-command-menu";
 import { useToast } from "../providers/toast";
@@ -510,6 +511,13 @@ export function InputBar({ onSubmit, disabled = false }: Props) {
   onSubmitRef.current = () => {
     if (disabled) return;
 
+    const submittedText = textareaRef.current?.plainText.trim() ?? "";
+    const exactCommand = COMMANDS.find((command) => command.value === submittedText);
+    if (exactCommand) {
+      handleCommand(exactCommand);
+      return;
+    }
+
     if (showCommandMenu) {
       const command = resolveCommand(selectedIndex);
       handleCommand(command);
@@ -526,6 +534,14 @@ export function InputBar({ onSubmit, disabled = false }: Props) {
 
     handleSubmit();
   };
+
+  // TextareaRenderable exposes submit, but its React host adapter has no
+  // content-change event. Read its buffer after key handling so command and
+  // mention state remain in sync while the user types.
+  useKeyboard(() => {
+    if (disabled) return;
+    queueMicrotask(handleTextareaContentChange);
+  });
 
   useKeyboard((key) => {
     if (disabled) return;
@@ -664,7 +680,6 @@ export function InputBar({ onSubmit, disabled = false }: Props) {
               )
             }
             keyBindings={TEXTAREA_KEY_BINDINGS}
-            onContentChange={handleTextareaContentChange}
             placeholder={`Ask anything... "Fix a bug in the database"`}
           />
           <StatusBar />

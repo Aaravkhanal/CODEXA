@@ -1,9 +1,30 @@
 import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statSync, unlinkSync } from "node:fs";
-import { homedir } from "node:os";
-import { join, dirname } from "node:path";
-import { execSync } from "node:child_process";
+import { join, dirname, relative, resolve } from "node:path";
+import { execFileSync } from "node:child_process";
+import { getCodexaDir } from "./global-config";
 
-const SNAPSHOTS_DIR = join(homedir(), ".codexa", "snapshots");
+function snapshotsDir(): string {
+  return join(getCodexaDir(), "snapshots");
+}
+
+function isPathInside(root: string, candidate: string): boolean {
+  const relativePath = relative(root, candidate);
+  return relativePath !== "" && !relativePath.startsWith("..") && !relativePath.includes(`${String.fromCharCode(0)}`);
+}
+
+function getSessionDir(sessionId: string): string {
+  if (!/^[a-zA-Z0-9_-]+$/.test(sessionId)) {
+    throw new Error("Invalid snapshot session ID");
+  }
+  return join(snapshotsDir(), sessionId);
+}
+
+function getProjectPath(cwd: string, filePath: unknown): string | null {
+  if (typeof filePath !== "string" || !filePath || filePath.includes("\0")) return null;
+  const projectRoot = resolve(cwd);
+  const target = resolve(projectRoot, filePath);
+  return isPathInside(projectRoot, target) ? target : null;
+}
 
 function ensureDirectoryExist(dirPath: string) {
   if (!existsSync(dirPath)) {
@@ -13,7 +34,8 @@ function ensureDirectoryExist(dirPath: string) {
 
 export function saveFileSnapshot(sessionId: string, filePath: string, absolutePath: string): void {
   try {
-    ensureDirectoryExist(join(SNAPSHOTS_DIR, sessionId));
+    const sessionDir = getSessionDir(sessionId);
+    ensureDirectoryExist(sessionDir);
 
     // If file doesn't exist, we save a special marker "DELETE" to represent that it shouldn't exist.
     let content: string;
@@ -29,7 +51,7 @@ export function saveFileSnapshot(sessionId: string, filePath: string, absolutePa
     const timestamp = Date.now();
     // Encode filename to be safe for filesystem
     const safeFilePath = Buffer.from(filePath).toString("hex");
-    const snapshotPath = join(SNAPSHOTS_DIR, sessionId, `${timestamp}_${safeFilePath}.bak`);
+    const snapshotPath = join(sessionDir, `${timestamp}_${safeFilePath}.bak`);
 
     const data = {
       filePath,
@@ -44,7 +66,12 @@ export function saveFileSnapshot(sessionId: string, filePath: string, absolutePa
 }
 
 export function undoLastSnapshotSet(sessionId: string, cwd: string = process.cwd()): string[] {
-  const sessionDir = join(SNAPSHOTS_DIR, sessionId);
+  let sessionDir: string;
+  try {
+    sessionDir = getSessionDir(sessionId);
+  } catch {
+    return [];
+  }
   if (!existsSync(sessionDir)) {
     return [];
   }
@@ -72,18 +99,24 @@ export function undoLastSnapshotSet(sessionId: string, cwd: string = process.cwd
     for (const file of turnFiles) {
       const snapshotPath = join(sessionDir, file);
       const raw = readFileSync(snapshotPath, "utf-8");
-      const { filePath, isDeletedMarker, content } = JSON.parse(raw);
+      const { filePath, isDeletedMarker, content } = JSON.parse(raw) as {
+        filePath?: unknown;
+        isDeletedMarker?: unknown;
+        content?: unknown;
+      };
 
-      const absoluteTarget = join(cwd, filePath);
+      const snapshotFilePath = typeof filePath === "string" ? filePath : null;
+      const absoluteTarget = getProjectPath(cwd, snapshotFilePath);
+      if (!snapshotFilePath || !absoluteTarget || typeof content !== "string") continue;
 
       // Prefer git checkout if it's a git repo and the file is tracked
       let restoredViaGit = false;
       const gitDir = join(cwd, ".git");
       if (existsSync(gitDir)) {
         try {
-          execSync(`git checkout -- "${filePath}"`, { cwd, stdio: "ignore" });
+          execFileSync("git", ["checkout", "--", snapshotFilePath], { cwd, stdio: "ignore" });
           restoredViaGit = true;
-          restoredPaths.push(filePath);
+          restoredPaths.push(snapshotFilePath);
         } catch {
           // Fall back to manual restore
         }
@@ -98,7 +131,7 @@ export function undoLastSnapshotSet(sessionId: string, cwd: string = process.cwd
         } else {
           writeFileSync(absoluteTarget, content, "utf-8");
         }
-        restoredPaths.push(filePath);
+        restoredPaths.push(snapshotFilePath);
       }
 
       // Delete snapshot file after restore
@@ -114,14 +147,15 @@ export function undoLastSnapshotSet(sessionId: string, cwd: string = process.cwd
 
 export function cleanOldSnapshots(maxAgeDays: number = 7): void {
   try {
-    if (!existsSync(SNAPSHOTS_DIR)) return;
+    const root = snapshotsDir();
+    if (!existsSync(root)) return;
 
-    const sessions = readdirSync(SNAPSHOTS_DIR);
+    const sessions = readdirSync(root);
     const now = Date.now();
     const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
 
     for (const session of sessions) {
-      const sessionDir = join(SNAPSHOTS_DIR, session);
+      const sessionDir = join(root, session);
       if (!statSync(sessionDir).isDirectory()) continue;
 
       const files = readdirSync(sessionDir);

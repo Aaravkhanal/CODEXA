@@ -123,12 +123,7 @@ export function AddApiKeyDialogContent({
         ref={inputRef}
         focused
         placeholder={selectedProvider?.placeholder ?? "sk-..."}
-        onContentChange={() => {
-          const val = (inputRef.current as any)?.value ?? "";
-          if (val.includes("\n")) {
-            handleSave(val.replace(/\n/g, "").trim());
-          }
-        }}
+        onSubmit={() => handleSave((inputRef.current as any)?.value ?? "")}
         width={60}
       />
       <text attributes={2} fg="gray">

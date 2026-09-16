@@ -2,7 +2,7 @@ import { mkdir, readFile, readdir, stat, writeFile, unlink, rename } from "fs/pr
 import { existsSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "path";
 import { toolInputSchemas, Mode, type ModeType } from "@codexa/shared";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { executeSandboxedCommand } from "./sandbox";
 import { cliArgs } from "./cli-args";
 
@@ -389,8 +389,7 @@ export async function executeLocalTool(
       }
       try {
         execSync("git add -A", { cwd: resolved });
-        const safeMessage = message.replace(/"/g, '\\"');
-        const stdout = execSync(`git commit -m "${safeMessage}"`, { cwd: resolved, encoding: "utf-8" });
+        const stdout = execFileSync("git", ["commit", "-m", message], { cwd: resolved, encoding: "utf-8" });
         return { success: true, commit: stdout };
       } catch (err: any) {
         throw new Error(`Git commit failed: ${err.message}`);
