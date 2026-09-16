@@ -19,7 +19,6 @@ export class SkillManager {
     this.cwd = resolve(cwd);
     this.projectSkillsDir = join(this.cwd, ".codexa", "skills");
     this.globalSkillsDir = join(homedir(), ".codexa", "skills");
-    this.ensureDirs();
   }
 
   private ensureDirs(): void {
@@ -123,7 +122,8 @@ export class SkillManager {
       description,
       whenToUse: whenToUse.length > 0 ? whenToUse : [name, "project architecture"],
       requiredTools: ["readFile", "editFile", "bash"],
-      recommendedWorkflow: workflow.length > 0 ? workflow : ["Inspect project structure", "Follow conventions"],
+      recommendedWorkflow:
+        workflow.length > 0 ? workflow : ["Inspect project structure", "Follow conventions"],
       constraints: ["Respect existing architecture and styling"],
       examples: [
         {
@@ -174,8 +174,14 @@ export class SkillManager {
     try {
       const content = readFileSync(skillFile, "utf-8");
       const lines = content.split("\n");
-      const title = lines.find((l) => l.startsWith("# "))?.replace(/^#\s+/, "").trim() || dirPath.split("/").pop() || "unknown";
-      
+      const title =
+        lines
+          .find((l) => l.startsWith("# "))
+          ?.replace(/^#\s+/, "")
+          .trim() ||
+        dirPath.split("/").pop() ||
+        "unknown";
+
       const whenToUse: string[] = [];
       let inWhenToUse = false;
 
@@ -195,7 +201,8 @@ export class SkillManager {
       return {
         name: title.toLowerCase(),
         version: "1.0.0",
-        description: lines.find((l) => l.trim().length > 0 && !l.startsWith("#")) || "Project skill",
+        description:
+          lines.find((l) => l.trim().length > 0 && !l.startsWith("#")) || "Project skill",
         whenToUse: whenToUse.length > 0 ? whenToUse : [title.toLowerCase()],
         requiredTools: ["readFile", "editFile", "bash"],
         recommendedWorkflow: ["Follow skill instructions"],

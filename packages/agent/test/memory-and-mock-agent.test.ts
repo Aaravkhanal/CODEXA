@@ -18,7 +18,7 @@ describe("Project Memory & Mock Agent Loop", () => {
         version: "1.0.0",
         scripts: { test: "echo 'all tests pass'" },
       }),
-      "utf-8"
+      "utf-8",
     );
   });
 
@@ -113,5 +113,20 @@ describe("Project Memory & Mock Agent Loop", () => {
     const resumeInfo = memManager.getResumeInfo();
     expect(resumeInfo.hasMemory).toBe(true);
     expect(resumeInfo.lastSummary).toBeDefined();
+  });
+
+  it("creates a read-only plan without creating CODEXA metadata or changing files", async () => {
+    const orchestrator = new AgentOrchestrator({
+      cwd: testDir,
+      providerConfig: { provider: "mock", model: "mock-coding-model" },
+      planProviderConfig: { provider: "mock", model: "mock-fast-model" },
+    });
+
+    const originalPackage = readFileSync(join(testDir, "package.json"), "utf-8");
+    const result = await orchestrator.plan("Suggest a calculator improvement");
+
+    expect(result.plan).toBeDefined();
+    expect(readFileSync(join(testDir, "package.json"), "utf-8")).toBe(originalPackage);
+    expect(existsSync(join(testDir, ".codexa"))).toBe(false);
   });
 });

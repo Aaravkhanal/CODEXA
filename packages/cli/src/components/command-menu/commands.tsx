@@ -1,23 +1,20 @@
-import type { Command } from "./types";
-import {
-  AgentsDialogContent,
-  ThemeDialogContent,
-  SessionsDialogContent,
-  ModelsDialogContent,
-  McpDialogContent,
-  CodexaLensDialogContent,
-  GitDialogContent,
-  MemoryDialogContent,
-} from "../dialogs";
-import { AddApiKeyDialogContent } from "../dialogs/add-api-key-dialog";
 import { SUPPORTED_CHAT_MODELS } from "@codexa/shared";
-import { performLogin } from "../../lib/oauth";
 import { clearAuth } from "../../lib/auth";
-import { openBillingPortal, openUpgradeCheckout } from "../../lib/upgrade";
+import { performLogin } from "../../lib/oauth";
 import { detectProject } from "../../lib/project-detector";
 import { undoLastSnapshotSet } from "../../lib/snapshot-manager";
-import { apiClient } from "../../lib/api-client";
-import { ProjectMemoryManager } from "@codexa/agent";
+import { openBillingPortal, openUpgradeCheckout } from "../../lib/upgrade";
+import {
+  CodexaLensDialogContent,
+  GitDialogContent,
+  McpDialogContent,
+  MemoryDialogContent,
+  ModelsDialogContent,
+  SessionsDialogContent,
+  ThemeDialogContent,
+} from "../dialogs";
+import { AddApiKeyDialogContent } from "../dialogs/add-api-key-dialog";
+import type { Command } from "./types";
 
 export const COMMANDS: Command[] = [
   {
@@ -26,7 +23,22 @@ export const COMMANDS: Command[] = [
     value: "/help",
     action: (ctx) => {
       ctx.toast.show({
-        message: "Commands: /model, /apikey, /plan, /build, /loop, /compact, /status, /diff, /undo, /exit",
+        message:
+          "Commands: /init, /plan, /build, /fix, /test, /review, /loop, /compact, /commit, /share, /undo, /clear",
+      });
+    },
+  },
+  {
+    name: "init",
+    description: "Prepare a safe project setup plan",
+    value: "/init",
+    action: (ctx) => {
+      ctx.setMode("PLAN");
+      ctx.setText?.(
+        "Inspect this project and create a safe setup plan: detect the stack, tests, commands, and recommended CODEXA configuration. Do not modify files.",
+      );
+      ctx.toast.show({
+        message: "PLAN mode selected. Review the prepared setup request, then press Enter.",
       });
     },
   },
@@ -35,8 +47,21 @@ export const COMMANDS: Command[] = [
     description: "Continue an implementation loop with tests and fixes",
     value: "/loop",
     action: (ctx) => {
-      ctx.setText?.("Continue the current task. Run the relevant tests, fix any failures, and report the result.");
+      ctx.setText?.(
+        "Continue the current task. Run the relevant tests, fix any failures, and report the result.",
+      );
       ctx.toast.show({ message: "Loop prompt prepared. Add context if needed, then press Enter." });
+    },
+  },
+  {
+    name: "fix",
+    description: "Prepare a focused bug-fix request",
+    value: "/fix",
+    action: (ctx) => {
+      ctx.setText?.(
+        "Inspect the current failing tests and errors, explain the root cause, propose a plan, then fix only the necessary files and verify the result.",
+      );
+      ctx.toast.show({ message: "Fix request prepared. Press Enter to start." });
     },
   },
   {
@@ -44,7 +69,33 @@ export const COMMANDS: Command[] = [
     description: "Save the current task summary to project memory",
     value: "/compact",
     action: (ctx) => {
-      ctx.submit?.("Summarize the current work concisely, record reusable findings in .codexa/memory.md, and do not make unrelated code changes.");
+      ctx.submit?.(
+        "Summarize the current work concisely, record reusable findings in .codexa/memory.md, and do not make unrelated code changes.",
+      );
+    },
+  },
+  {
+    name: "commit",
+    description: "Prepare a reviewed, explicit Git commit request",
+    value: "/commit",
+    action: (ctx) => {
+      ctx.setText?.(
+        "Review the current git diff and tests. Summarize exactly what will be committed, then create a concise commit only after asking for confirmation.",
+      );
+      ctx.toast.show({ message: "Commit request prepared. Press Enter to review changes first." });
+    },
+  },
+  {
+    name: "share",
+    description: "Prepare a sanitized shareable task summary",
+    value: "/share",
+    action: (ctx) => {
+      ctx.setText?.(
+        "Create a concise, sanitized summary of this task for sharing. Do not include API keys, secrets, absolute paths, or upload anything.",
+      );
+      ctx.toast.show({
+        message: "Share summary request prepared. Press Enter to generate it locally.",
+      });
     },
   },
   {
@@ -369,24 +420,9 @@ export const COMMANDS: Command[] = [
     name: "clear",
     description: "Clear history messages of this session",
     value: "/clear",
-    action: async (ctx) => {
-      if (!ctx.sessionId) {
-        ctx.toast.show({ variant: "error", message: "No active session to clear" });
-        return;
-      }
-      try {
-        const res = await apiClient.sessions[":id"].clear.$post({
-          param: { id: ctx.sessionId }
-        });
-        if (res.ok) {
-          ctx.toast.show({ variant: "success", message: "Conversation history cleared" });
-          ctx.navigate("/");
-        } else {
-          ctx.toast.show({ variant: "error", message: "Failed to clear session" });
-        }
-      } catch {
-        ctx.toast.show({ variant: "error", message: "Failed to clear session" });
-      }
+    action: (ctx) => {
+      ctx.clearSession?.();
+      ctx.toast.show({ variant: "success", message: "Conversation history cleared" });
     },
   },
   {

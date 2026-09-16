@@ -17,7 +17,6 @@ export class CheckpointManager {
   constructor(cwd: string = process.cwd()) {
     this.cwd = resolve(cwd);
     this.checkpointDir = join(this.cwd, ".codexa", "state", "checkpoints");
-    this.ensureDirs();
   }
 
   private ensureDirs(): void {
@@ -85,9 +84,7 @@ export class CheckpointManager {
       return { success: false, message: "No checkpoints available for rollback." };
     }
 
-    const target = checkpointId
-      ? all.find((c) => c.id === checkpointId)
-      : all[0];
+    const target = checkpointId ? all.find((c) => c.id === checkpointId) : all[0];
 
     if (!target) {
       return { success: false, message: `Checkpoint "${checkpointId}" not found.` };

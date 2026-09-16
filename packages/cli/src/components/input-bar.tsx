@@ -1,24 +1,26 @@
 import { readdir } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
-
-import {useRef, useState, useCallback, useEffect, type RefObject} from "react";
-import { TextAttributes } from "@opentui/core";
-import { TextareaRenderable, ScrollBoxRenderable } from "@opentui/core";
+import { Mode } from "@codexa/shared";
+import {
+  type KeyBinding,
+  type ScrollBoxRenderable,
+  TextAttributes,
+  type TextareaRenderable,
+} from "@opentui/core";
 import { useKeyboard, useRenderer } from "@opentui/react";
-import { EmptyBorder } from "./border";
-import { StatusBar } from "./status-bar";
+import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { type KeyBinding } from "@opentui/core";
+import { useDialog } from "../providers/dialog";
+import { useKeyboardLayer } from "../providers/keyboard-layer";
+import { usePromptConfig } from "../providers/prompt-config";
+import { useTheme } from "../providers/theme";
+import { useToast } from "../providers/toast";
+import { EmptyBorder } from "./border";
 import { CommandMenu } from "./command-menu";
 import { COMMANDS } from "./command-menu/commands";
 import type { Command } from "./command-menu/types";
 import { useCommandMenu } from "./command-menu/use-command-menu";
-import { useToast } from "../providers/toast";
-import { useKeyboardLayer } from "../providers/keyboard-layer";
-import { useDialog } from "../providers/dialog";
-import { useTheme } from "../providers/theme";
-import { usePromptConfig } from "../providers/prompt-config";
-import { Mode } from "@codexa/shared";
+import { StatusBar } from "./status-bar";
 
 const MAX_VISIBLE_MENTIONS = 8;
 const CURRENT_DIRECTORY = process.cwd();
@@ -39,19 +41,14 @@ type MentionCandidate = {
 
 function isWithinCurrentDirectory(targetPath: string) {
   const relativePath = relative(CURRENT_DIRECTORY, targetPath);
-  return relativePath === ""
-    || (!relativePath.startsWith("..")
-    && !isAbsolute(relativePath));
+  return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
 }
 
 function isMentionQueryCharacter(character: string) {
   return MENTION_QUERY_CHARACTER.test(character);
 }
 
-function findActiveMention(
-  text: string,
-  cursorOffset: number,
-): MentionMatch | null {
+function findActiveMention(text: string, cursorOffset: number): MentionMatch | null {
   const safeOffset = Math.max(0, Math.min(cursorOffset, text.length));
 
   let start = safeOffset;
@@ -72,7 +69,7 @@ function findActiveMention(
     return null;
   }
 
-  const previousCharacter = token[mentionStart-1];
+  const previousCharacter = token[mentionStart - 1];
   if (previousCharacter && isMentionQueryCharacter(previousCharacter)) {
     return null;
   }
@@ -93,9 +90,7 @@ function findActiveMention(
   };
 }
 
-async function getMentionCandidates(
-  query: string,
-): Promise<MentionCandidate[]> {
+async function getMentionCandidates(query: string): Promise<MentionCandidate[]> {
   const normalizedQuery = query.startsWith("./") ? query.slice(2) : query;
   if (normalizedQuery.startsWith("/")) {
     return [];
@@ -106,10 +101,7 @@ async function getMentionCandidates(
     ? normalizedQuery.length - 1
     : normalizedQuery.lastIndexOf("/");
 
-  const directoryPart =
-    lastSlashIndex === -1
-      ? ""
-      : normalizedQuery.slice(0, lastSlashIndex);
+  const directoryPart = lastSlashIndex === -1 ? "" : normalizedQuery.slice(0, lastSlashIndex);
 
   const namePrefix = hasTrailingSlash
     ? ""
@@ -117,10 +109,7 @@ async function getMentionCandidates(
       ? normalizedQuery
       : normalizedQuery.slice(lastSlashIndex + 1);
 
-  const absoluteDirectory = resolve(
-    CURRENT_DIRECTORY,
-    directoryPart || ".",
-  );
+  const absoluteDirectory = resolve(CURRENT_DIRECTORY, directoryPart || ".");
 
   if (!isWithinCurrentDirectory(absoluteDirectory)) {
     return [];
@@ -134,15 +123,9 @@ async function getMentionCandidates(
     const showHiddenEntries = namePrefix.startsWith(".");
 
     const directMatches = entries
-      .filter(
-        (entry) =>
-          showHiddenEntries || !entry.name.startsWith("."),
-      )
+      .filter((entry) => showHiddenEntries || !entry.name.startsWith("."))
       .filter((entry) => {
-        return (
-          lowercasePrefix === "" ||
-          entry.name.toLowerCase().startsWith(lowercasePrefix)
-        );
+        return lowercasePrefix === "" || entry.name.toLowerCase().startsWith(lowercasePrefix);
       })
       .sort((left, right) => {
         if (left.isDirectory() !== right.isDirectory()) {
@@ -152,12 +135,8 @@ async function getMentionCandidates(
         return left.name.localeCompare(right.name);
       })
       .map((entry) => {
-        const path = directoryPart
-          ? `${directoryPart}/${entry.name}`
-          : entry.name;
-        const kind: MentionCandidate["kind"] = entry.isDirectory()
-          ? "directory"
-          : "file";
+        const path = directoryPart ? `${directoryPart}/${entry.name}` : entry.name;
+        const kind: MentionCandidate["kind"] = entry.isDirectory() ? "directory" : "file";
 
         return {
           path: kind === "directory" ? `${path}/` : path,
@@ -165,72 +144,44 @@ async function getMentionCandidates(
         };
       });
 
-    if (
-      directMatches.length > 0 ||
-      directoryPart !== "" ||
-      namePrefix === ""
-    ) {
+    if (directMatches.length > 0 || directoryPart !== "" || namePrefix === "") {
       return directMatches;
     }
 
     const fallbackMatches: MentionCandidate[] = [];
 
-    const visit = async (
-      absoluteDirectory: string,
-      directoryPart: string,
-    ): Promise<void> => {
+    const visit = async (absoluteDirectory: string, directoryPart: string): Promise<void> => {
       const entries = await readdir(absoluteDirectory, {
         withFileTypes: true,
       });
 
       for (const entry of entries) {
-        if (
-          !showHiddenEntries &&
-          entry.name.startsWith(".")
-        ) {
+        if (!showHiddenEntries && entry.name.startsWith(".")) {
           continue;
         }
 
-        if (
-          entry.isDirectory() &&
-          RECURSIVE_MENTION_IGNORED_DIRECTORIES.has(entry.name)
-        ) {
+        if (entry.isDirectory() && RECURSIVE_MENTION_IGNORED_DIRECTORIES.has(entry.name)) {
           continue;
         }
 
-        const path = directoryPart
-          ? `${directoryPart}/${entry.name}`
-          : entry.name;
-        const kind: MentionCandidate["kind"] = entry.isDirectory()
-          ? "directory"
-          : "file";
+        const path = directoryPart ? `${directoryPart}/${entry.name}` : entry.name;
+        const kind: MentionCandidate["kind"] = entry.isDirectory() ? "directory" : "file";
 
-        if (
-          entry.name.toLowerCase().startsWith(lowercasePrefix)
-        ) {
+        if (entry.name.toLowerCase().startsWith(lowercasePrefix)) {
           fallbackMatches.push({
             path: kind === "directory" ? `${path}/` : path,
             kind,
           });
 
-          if (
-            fallbackMatches.length >=
-            MAX_FALLBACK_MENTION_CANDIDATES
-          ) {
+          if (fallbackMatches.length >= MAX_FALLBACK_MENTION_CANDIDATES) {
             return;
           }
         }
 
         if (entry.isDirectory()) {
-          await visit(
-            resolve(absoluteDirectory, entry.name),
-            path,
-          );
+          await visit(resolve(absoluteDirectory, entry.name), path);
 
-          if (
-            fallbackMatches.length >=
-            MAX_FALLBACK_MENTION_CANDIDATES
-          ) {
+          if (fallbackMatches.length >= MAX_FALLBACK_MENTION_CANDIDATES) {
             return;
           }
         }
@@ -239,9 +190,7 @@ async function getMentionCandidates(
 
     await visit(CURRENT_DIRECTORY, "");
 
-    return fallbackMatches.sort((left, right) =>
-      left.path.localeCompare(right.path),
-    );
+    return fallbackMatches.sort((left, right) => left.path.localeCompare(right.path));
   } catch {
     return [];
   }
@@ -268,9 +217,7 @@ function FileMentionMenu({
   if (candidates.length === 0) {
     return (
       <box paddingX={1}>
-        <text attributes={TextAttributes.DIM}>
-          No matching files or folders
-        </text>
+        <text attributes={TextAttributes.DIM}>No matching files or folders</text>
       </box>
     );
   }
@@ -311,6 +258,7 @@ function FileMentionMenu({
 type Props = {
   onSubmit: (text: string) => void;
   disabled?: boolean;
+  onClear?: () => void;
 };
 
 export const TEXTAREA_KEY_BINDINGS: KeyBinding[] = [
@@ -320,7 +268,7 @@ export const TEXTAREA_KEY_BINDINGS: KeyBinding[] = [
   { name: "enter", shift: true, action: "newline" },
 ];
 
-export function InputBar({ onSubmit, disabled = false }: Props) {
+export function InputBar({ onSubmit, disabled = false, onClear }: Props) {
   const { mode, toggleMode, setMode, setModel } = usePromptConfig();
   const textareaRef = useRef<TextareaRenderable>(null);
   const onSubmitRef = useRef<() => void>(() => {});
@@ -388,14 +336,14 @@ export function InputBar({ onSubmit, disabled = false }: Props) {
   );
 
   const handleTextareaContentChange = useCallback(() => {
-    const textarea = textareaRef.current
+    const textarea = textareaRef.current;
     if (!textarea) return;
 
     const text = textarea.plainText;
 
     handleContentChange(textarea.plainText);
-    syncMentionMenu(text, textarea.cursorOffset)
-  }, [handleContentChange, syncMentionMenu])
+    syncMentionMenu(text, textarea.cursorOffset);
+  }, [handleContentChange, syncMentionMenu]);
 
   const handleSubmit = useCallback(() => {
     if (disabled) return;
@@ -408,27 +356,28 @@ export function InputBar({ onSubmit, disabled = false }: Props) {
 
     onSubmit(text);
     textarea.setText("");
-  }, [disabled, onSubmit])
+  }, [disabled, onSubmit]);
 
-  const handleMentionExecute = useCallback((index: number) => {
-    const textarea = textareaRef.current;
-    const mention = activeMentionRef.current;
-    const candidate = mentionCandidates[index];
+  const handleMentionExecute = useCallback(
+    (index: number) => {
+      const textarea = textareaRef.current;
+      const mention = activeMentionRef.current;
+      const candidate = mentionCandidates[index];
 
-    if (!textarea || !mention || !candidate) return;
+      if (!textarea || !mention || !candidate) return;
 
-    const insertion = candidate.kind === "directory"
-      ? candidate.path
-      : `${candidate.path} `;
+      const insertion = candidate.kind === "directory" ? candidate.path : `${candidate.path} `;
 
-    const nextText =
-      `${textarea.plainText.slice(0, mention.start)}@${insertion}` +
-      textarea.plainText.slice(mention.end);
+      const nextText =
+        `${textarea.plainText.slice(0, mention.start)}@${insertion}` +
+        textarea.plainText.slice(mention.end);
 
-    textarea.replaceText(nextText);
-    textarea.cursorOffset = mention.start + insertion.length + 1;
-    syncMentionMenu(nextText, textarea.cursorOffset);
-  }, [mentionCandidates, syncMentionMenu]);
+      textarea.replaceText(nextText);
+      textarea.cursorOffset = mention.start + insertion.length + 1;
+      syncMentionMenu(nextText, textarea.cursorOffset);
+    },
+    [mentionCandidates, syncMentionMenu],
+  );
 
   const handleTextareaCursorChange = useCallback(() => {
     const textarea = textareaRef.current;
@@ -437,37 +386,44 @@ export function InputBar({ onSubmit, disabled = false }: Props) {
     syncMentionMenu(textarea.plainText, textarea.cursorOffset);
   }, [syncMentionMenu]);
 
-  const handleCommand = useCallback((command: Command | undefined) => {
-    const textarea = textareaRef.current;
-    if (!textarea || !command) return;
+  const handleCommand = useCallback(
+    (command: Command | undefined) => {
+      const textarea = textareaRef.current;
+      if (!textarea || !command) return;
 
-    textarea.setText("");
+      textarea.setText("");
 
-    if (command.action) {
-      command.action({
-        exit: () => renderer.destroy(),
-        toast,
-        dialog,
-        navigate,
-        mode, 
-        setMode,
-        setModel,
-        setText: (t: string) => textarea.setText(t),
-        submit: (t: string) => {
-          textarea.setText("");
-          onSubmit(t);
-        },
-        sessionId,
-      });
-    } else {
-      textarea.insertText(command.value + " ");
-    }
-  }, [renderer, toast, dialog, navigate, mode, setMode, setModel, onSubmit, sessionId]);
+      if (command.action) {
+        command.action({
+          exit: () => renderer.destroy(),
+          toast,
+          dialog,
+          navigate,
+          mode,
+          setMode,
+          setModel,
+          setText: (t: string) => textarea.setText(t),
+          submit: (t: string) => {
+            textarea.setText("");
+            onSubmit(t);
+          },
+          sessionId,
+          clearSession: onClear,
+        });
+      } else {
+        textarea.insertText(command.value + " ");
+      }
+    },
+    [renderer, toast, dialog, navigate, mode, setMode, setModel, onSubmit, sessionId, onClear],
+  );
 
-  const handleCommandExecute = useCallback((index: number) => {
-    const command = resolveCommand(index);
-    handleCommand(command);
-  }, [resolveCommand, handleCommand]);
+  const handleCommandExecute = useCallback(
+    (index: number) => {
+      const command = resolveCommand(index);
+      handleCommand(command);
+    },
+    [resolveCommand, handleCommand],
+  );
 
   // Keep the file picker in sync with the current @mention token
   useEffect(() => {
@@ -555,10 +511,10 @@ export function InputBar({ onSubmit, disabled = false }: Props) {
   // Register base layer responder for ctrl + c dismissal
   useEffect(() => {
     setResponder("base", () => {
-      if(disabled) return false;
+      if (disabled) return false;
 
       const textarea = textareaRef.current;
-      if(textarea && textarea.plainText.length > 0) {
+      if (textarea && textarea.plainText.length > 0) {
         textarea.setText("");
         return true;
       }
@@ -593,10 +549,7 @@ export function InputBar({ onSubmit, disabled = false }: Props) {
           return 0;
         }
 
-        const nextIndex = Math.min(
-          mentionCandidates.length - 1,
-          currentIndex + 1,
-        );
+        const nextIndex = Math.min(mentionCandidates.length - 1, currentIndex + 1);
         const scrollbox = mentionScrollRef.current;
 
         if (scrollbox) {
@@ -670,14 +623,9 @@ export function InputBar({ onSubmit, disabled = false }: Props) {
             </box>
           )}
           <textarea
-            ref = {textareaRef}
+            ref={textareaRef}
             focused={
-              !disabled &&
-              (
-                isTopLayer("base") ||
-                isTopLayer("command") ||
-                isTopLayer("mention")
-              )
+              !disabled && (isTopLayer("base") || isTopLayer("command") || isTopLayer("mention"))
             }
             keyBindings={TEXTAREA_KEY_BINDINGS}
             placeholder={`Ask anything... "Fix a bug in the database"`}

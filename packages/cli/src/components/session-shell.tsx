@@ -1,8 +1,8 @@
 import { TextAttributes } from "@opentui/core";
 import { Children, type ReactNode } from "react";
+import { usePromptConfig } from "../providers/prompt-config";
 import { InputBar } from "./input-bar";
 import { Spinner } from "./spinner";
-import { usePromptConfig } from "../providers/prompt-config";
 
 type Props = {
   children?: ReactNode;
@@ -10,6 +10,7 @@ type Props = {
   inputDisabled?: boolean;
   loading?: boolean;
   interruptible?: boolean;
+  onClear?: () => void;
 };
 
 export function SessionShell({
@@ -18,12 +19,11 @@ export function SessionShell({
   inputDisabled = false,
   loading = false,
   interruptible = false,
+  onClear,
 }: Props) {
   const { mode } = usePromptConfig();
 
-  const cleanChildren = Children.toArray(children).filter(
-    (child) => typeof child !== "string"
-  );
+  const cleanChildren = Children.toArray(children).filter((child) => typeof child !== "string");
 
   return (
     <box
@@ -39,7 +39,7 @@ export function SessionShell({
         <box>{cleanChildren}</box>
       </scrollbox>
       <box flexShrink={0}>
-        <InputBar onSubmit={onSubmit} disabled={inputDisabled} />
+        <InputBar onSubmit={onSubmit} disabled={inputDisabled} onClear={onClear} />
       </box>
       <box
         flexShrink={0}
@@ -53,7 +53,7 @@ export function SessionShell({
         <box flexDirection="row" alignItems="center" gap={2}>
           {loading ? (
             <>
-              <Spinner mode={mode}/>
+              <Spinner mode={mode} />
               {interruptible ? <text>esc to interrupt</text> : null}
             </>
           ) : null}

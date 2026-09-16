@@ -1,6 +1,6 @@
+import type { ModeType, SupportedChatModelId } from "@codexa/shared";
 import type { DialogContextValue } from "../../providers/dialog";
 import type { ToastContextValue } from "../../providers/toast";
-import type { ModeType, SupportedChatModelId } from "@codexa/shared";
 
 export type CommandContext = {
   exit: () => void;
@@ -12,6 +12,7 @@ export type CommandContext = {
   setModel: (model: SupportedChatModelId) => void;
   setText?: (text: string) => void;
   submit?: (text: string) => void;
+  clearSession?: () => void;
   sessionId?: string;
 };
 

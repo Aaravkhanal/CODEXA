@@ -18,7 +18,6 @@ export class ProjectIndexer {
     this.cwd = resolve(cwd);
     this.memoryDir = join(this.cwd, ".codexa", "memory");
     this.indexPath = join(this.memoryDir, "project-context.json");
-    this.ensureDirs();
   }
 
   private ensureDirs(): void {
@@ -30,7 +29,7 @@ export class ProjectIndexer {
   /**
    * Scan project and generate or update the Knowledge Graph.
    */
-  public generateKnowledgeGraph(): ProjectKnowledgeGraph {
+  public generateKnowledgeGraph(persist = true): ProjectKnowledgeGraph {
     let name = this.cwd.split("/").pop() || "unknown-project";
     let packageManager = "bun";
     const dependencies: Record<string, string> = {};
@@ -50,22 +49,32 @@ export class ProjectIndexer {
     }
 
     // Detect Package Manager
-    if (existsSync(join(this.cwd, "bun.lock")) || existsSync(join(this.cwd, "bun.lockb"))) packageManager = "bun";
+    if (existsSync(join(this.cwd, "bun.lock")) || existsSync(join(this.cwd, "bun.lockb")))
+      packageManager = "bun";
     else if (existsSync(join(this.cwd, "pnpm-lock.yaml"))) packageManager = "pnpm";
     else if (existsSync(join(this.cwd, "yarn.lock"))) packageManager = "yarn";
     else if (existsSync(join(this.cwd, "package-lock.json"))) packageManager = "npm";
 
     // Detect Frameworks & Languages
     const allDeps = { ...dependencies, ...devDependencies };
-    if (allDeps.react || allDeps["react-dom"]) { frameworks.add("react"); languages.add("typescript"); }
-    if (allDeps.next) { frameworks.add("next.js"); languages.add("typescript"); }
+    if (allDeps.react || allDeps["react-dom"]) {
+      frameworks.add("react");
+      languages.add("typescript");
+    }
+    if (allDeps.next) {
+      frameworks.add("next.js");
+      languages.add("typescript");
+    }
     if (allDeps.vue) frameworks.add("vue");
     if (allDeps.express) frameworks.add("express");
     if (allDeps.hono) frameworks.add("hono");
     if (allDeps["@fastify/core"] || allDeps.fastify) frameworks.add("fastify");
 
     // Check Python
-    if (existsSync(join(this.cwd, "requirements.txt")) || existsSync(join(this.cwd, "pyproject.toml"))) {
+    if (
+      existsSync(join(this.cwd, "requirements.txt")) ||
+      existsSync(join(this.cwd, "pyproject.toml"))
+    ) {
       languages.add("python");
       packageManager = "pip";
     }
@@ -108,7 +117,10 @@ export class ProjectIndexer {
       indexedAt: new Date().toISOString(),
     };
 
-    writeFileSync(this.indexPath, JSON.stringify(graph, null, 2), "utf-8");
+    if (persist) {
+      this.ensureDirs();
+      writeFileSync(this.indexPath, JSON.stringify(graph, null, 2), "utf-8");
+    }
     return graph;
   }
 

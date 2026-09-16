@@ -18,16 +18,16 @@
 import { generateText, type LanguageModel } from "ai";
 import type { ProjectContext } from "../context/engine.ts";
 import { ContextEngine } from "../context/engine.ts";
+import { DependencyManager } from "../dependencies/manager.ts";
+import { ProjectIndexer } from "../index/project-indexer.ts";
+import { ProjectMemoryManager } from "../memory/project-memory.ts";
 import type { ProviderConfig } from "../providers/index.ts";
 import { createLanguageModel } from "../providers/index.ts";
+import { PermissionEngine } from "../safety/permission-engine.ts";
+import { SkillManager } from "../skills/manager.ts";
+import { CheckpointManager } from "../state/checkpoint-manager.ts";
 import type { AgentTools } from "../tools/executor.ts";
 import { createAgentTools } from "../tools/executor.ts";
-import { SkillManager } from "../skills/manager.ts";
-import { ProjectIndexer } from "../index/project-indexer.ts";
-import { CheckpointManager } from "../state/checkpoint-manager.ts";
-import { DependencyManager } from "../dependencies/manager.ts";
-import { PermissionEngine } from "../safety/permission-engine.ts";
-import { ProjectMemoryManager } from "../memory/project-memory.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -74,6 +74,8 @@ export interface OrchestratorOptions {
   onConfirmDangerous?: (command: string, description: string) => Promise<boolean>;
   /** Callback to stream progress events to the TUI */
   onProgress?: (event: AgentProgressEvent) => void;
+  /** Lets an interactive client approve the plan before code can be changed. */
+  onPlanReady?: (plan: string) => Promise<boolean>;
 }
 
 export interface OrchestratorResult {
@@ -112,6 +114,7 @@ export class AgentOrchestrator {
       tokenBudget: 80_000,
       onConfirmDangerous: async () => false,
       onProgress: () => {},
+      onPlanReady: async () => true,
       planProviderConfig: options.providerConfig,
       ...options,
     };
@@ -150,20 +153,33 @@ export class AgentOrchestrator {
 
       const detectedSkills = this.skillManager.detectSkillsForTask(task);
       const skillInstructions = detectedSkills
-        .map((s) => `[SKILL: ${s.name}]\nDescription: ${s.description}\nRecommended Workflow: ${s.recommendedWorkflow.join(" -> ")}`)
+        .map(
+          (s) =>
+            `[SKILL: ${s.name}]\nDescription: ${s.description}\nRecommended Workflow: ${s.recommendedWorkflow.join(" -> ")}`,
+        )
         .join("\n\n");
-      const skillsDetail = detectedSkills.length > 0
-        ? `Loaded skills: ${detectedSkills.map((s) => s.name).join(", ")}`
-        : "No specific skills matched";
+      const skillsDetail =
+        detectedSkills.length > 0
+          ? `Loaded skills: ${detectedSkills.map((s) => s.name).join(", ")}`
+          : "No specific skills matched";
 
       // ── Phase 1: Explorer & Project Knowledge Graph ────────────────────
-      emit({ phase: "exploring", message: "Analyzing project structure & Knowledge Graph...", detail: skillsDetail });
+      emit({
+        phase: "exploring",
+        message: "Analyzing project structure & Knowledge Graph...",
+        detail: skillsDetail,
+      });
       const graph = this.projectIndexer.getOrBuildGraph();
       const projectMemory = this.memoryManager.getOrInitMemory(graph);
       const graphContextStr = `Project Name: ${graph.projectName}\nFrameworks: ${graph.frameworks.join(", ") || "none"}\nLanguages: ${graph.languages.join(", ") || "none"}\nPackage Manager: ${graph.packageManager}\nDatabase: ${graph.databaseType || "none"}\nArchitecture Notes: ${graph.architectureNotes.join("; ") || "standard"}\n\nProject Memory:\n${projectMemory.slice(0, 3000)}`;
 
       const context = await this.contextEngine.buildContext(task);
-      const explorationSummary = await this.runExplorer(task, context, graphContextStr, skillInstructions);
+      const explorationSummary = await this.runExplorer(
+        task,
+        context,
+        graphContextStr,
+        skillInstructions,
+      );
       emit({
         phase: "exploring",
         message: `✓ Project '${graph.projectName}' analyzed (${context.files.length} relevant files)`,
@@ -174,6 +190,22 @@ export class AgentOrchestrator {
       emit({ phase: "planning", message: "Creating implementation plan..." });
       const plan = await this.runPlanner(task, context, explorationSummary, skillInstructions);
       emit({ phase: "planning", message: "✓ Plan ready", detail: plan });
+
+      const planApproved = await this.options.onPlanReady(plan);
+      if (!planApproved) {
+        const summary = "Implementation cancelled before any files were changed.";
+        emit({ phase: "done", message: summary });
+        return {
+          success: true,
+          summary,
+          filesModified,
+          testsRun,
+          testsPassed,
+          debugRetries,
+          totalTokensUsed: this.totalTokensUsed,
+          durationMs: Date.now() - startMs,
+        };
+      }
 
       // ── Phase 3: Coder & Dependency Check ───────────────────────────────
       emit({ phase: "coding", message: "Verifying project dependencies..." });
@@ -296,6 +328,45 @@ export class AgentOrchestrator {
     }
   }
 
+  /**
+   * Analyze a task and return an implementation plan without invoking tools,
+   * creating checkpoints, installing dependencies, or editing project files.
+   */
+  async plan(task: string): Promise<{ plan: string; totalTokensUsed: number; durationMs: number }> {
+    const startMs = Date.now();
+    const emit = (event: AgentProgressEvent) => this.options.onProgress(event);
+
+    emit({ phase: "exploring", message: "Analyzing project for a read-only plan..." });
+    const graph = this.projectIndexer.generateKnowledgeGraph(false);
+    const projectMemory =
+      this.memoryManager.getResumeInfo().memoryContent ?? "No project memory recorded.";
+    const graphContextStr = `Project Name: ${graph.projectName}\nFrameworks: ${graph.frameworks.join(", ") || "none"}\nLanguages: ${graph.languages.join(", ") || "none"}\nPackage Manager: ${graph.packageManager}\nDatabase: ${graph.databaseType || "none"}\nArchitecture Notes: ${graph.architectureNotes.join("; ") || "standard"}\n\nProject Memory:\n${projectMemory.slice(0, 3000)}`;
+    const context = await this.contextEngine.buildContext(task);
+    const detectedSkills = this.skillManager.detectSkillsForTask(task);
+    const skillInstructions = detectedSkills
+      .map(
+        (skill) =>
+          `[SKILL: ${skill.name}]\nDescription: ${skill.description}\nRecommended Workflow: ${skill.recommendedWorkflow.join(" -> ")}`,
+      )
+      .join("\n\n");
+    const explorationSummary = await this.runExplorer(
+      task,
+      context,
+      graphContextStr,
+      skillInstructions,
+    );
+
+    emit({ phase: "planning", message: "Creating read-only implementation plan..." });
+    const plan = await this.runPlanner(task, context, explorationSummary, skillInstructions);
+    emit({ phase: "done", message: "✓ Read-only plan ready", detail: plan });
+
+    return {
+      plan,
+      totalTokensUsed: this.totalTokensUsed,
+      durationMs: Date.now() - startMs,
+    };
+  }
+
   // ── Sub-agent implementations ──────────────────────────────────────────
 
   private async runExplorer(
@@ -315,14 +386,16 @@ export class AgentOrchestrator {
       skillInstructions ? `Skills Guidelines:\n${skillInstructions}` : "",
       `Top relevant files:\n${fileList}`,
       "Provide a concise understanding of the project structure and what files will need to be modified for this task.",
-    ].filter(Boolean).join("\n\n");
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const { text, usage } = await (generateText as any)({
       model: this.planModel,
       system: EXPLORER_SYSTEM_PROMPT,
       prompt: promptText,
     });
-    this.totalTokensUsed += (usage?.totalTokens ?? 0);
+    this.totalTokensUsed += usage?.totalTokens ?? 0;
     return text;
   }
 
@@ -334,7 +407,10 @@ export class AgentOrchestrator {
   ): Promise<string> {
     const contextBlock = context.files
       .slice(0, 5)
-      .map((f) => `\`\`\`${getFileExtension(f.path)}\n// ${f.path}\n${f.content.slice(0, 2000)}\n\`\`\``)
+      .map(
+        (f) =>
+          `\`\`\`${getFileExtension(f.path)}\n// ${f.path}\n${f.content.slice(0, 2000)}\n\`\`\``,
+      )
       .join("\n\n");
 
     const promptText = [
@@ -343,14 +419,16 @@ export class AgentOrchestrator {
       skillInstructions ? `Skills Guidelines:\n${skillInstructions}` : "",
       `Key files:\n${contextBlock}`,
       "Create a numbered, step-by-step implementation plan.",
-    ].filter(Boolean).join("\n\n");
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const { text, usage } = await (generateText as any)({
       model: this.planModel,
       system: PLANNER_SYSTEM_PROMPT,
       prompt: promptText,
     });
-    this.totalTokensUsed += (usage?.totalTokens ?? 0);
+    this.totalTokensUsed += usage?.totalTokens ?? 0;
     return text;
   }
 
@@ -371,7 +449,9 @@ export class AgentOrchestrator {
       `Implementation plan:\n${plan}`,
       skillInstructions ? `Active Skill Guidelines:\n${skillInstructions}` : "",
       `Project files:\n${contextBlock}`,
-    ].filter(Boolean).join("\n\n");
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const { usage } = await (generateText as any)({
       model: this.model,
@@ -381,16 +461,14 @@ export class AgentOrchestrator {
       maxSteps: 15,
       onStepFinish({ toolResults }: any) {
         for (const result of toolResults ?? []) {
-          if (
-            ["writeFile", "editFile", "deleteFile", "moveFile"].includes(result.toolName)
-          ) {
+          if (["writeFile", "editFile", "deleteFile", "moveFile"].includes(result.toolName)) {
             const path = (result as any)?.result?.path ?? (result as any)?.output?.path;
             if (path && !filesModified.includes(path)) filesModified.push(path);
           }
         }
       },
     });
-    this.totalTokensUsed += (usage?.totalTokens ?? 0);
+    this.totalTokensUsed += usage?.totalTokens ?? 0;
 
     return { filesModified };
   }
@@ -469,16 +547,14 @@ export class AgentOrchestrator {
       maxSteps: 10,
       onStepFinish({ toolResults }: any) {
         for (const result of toolResults ?? []) {
-          if (
-            ["writeFile", "editFile", "deleteFile", "moveFile"].includes(result.toolName)
-          ) {
+          if (["writeFile", "editFile", "deleteFile", "moveFile"].includes(result.toolName)) {
             const path = (result as any)?.result?.path ?? (result as any)?.output?.path;
             if (path && !filesModified.includes(path)) filesModified.push(path);
           }
         }
       },
     });
-    this.totalTokensUsed += (usage?.totalTokens ?? 0);
+    this.totalTokensUsed += usage?.totalTokens ?? 0;
 
     return { filesModified };
   }
@@ -506,7 +582,7 @@ export class AgentOrchestrator {
       system: REVIEWER_SYSTEM_PROMPT,
       prompt: `Original task: ${task}\n\nModified files:\n${fileContents}\n\nProvide a concise code review summary. Identify any obvious issues, missing error handling, or improvements.`,
     });
-    this.totalTokensUsed += (usage?.totalTokens ?? 0);
+    this.totalTokensUsed += usage?.totalTokens ?? 0;
     return text;
   }
 }
