@@ -8,7 +8,9 @@ production Railway API by default.
 
 1. Protect `main` and require the `CI / validate` check.
 2. Create the `Aaravkhanal/homebrew-tap` public repository with a `Formula`
-   directory and a protected `main` branch.
+   directory and a protected `main` branch. The repository must have an initial
+   commit (for example, add `Formula/.gitkeep`); GitHub Actions cannot check out
+   an empty repository.
 3. Add this Actions variable to the CODEXA repository:
    - `HOMEBREW_TAP_REPOSITORY=Aaravkhanal/homebrew-tap`
 4. Add `HOMEBREW_TAP_TOKEN` as an Actions secret. Use a fine-grained token or
@@ -21,9 +23,15 @@ production Railway API by default.
 Do not place database URLs, Clerk secret keys, provider API keys, billing keys,
 or other credentials in GitHub variables used by the binary build.
 
-6. Configure npm trusted publishing for the `codexa` package and this repository.
+6. Configure npm trusted publishing for the `@aaravkhanal/codexa` package and
+   this repository. Use GitHub owner `Aaravkhanal`, repository `CODEXA`, and
+   workflow file `.github/workflows/release.yml` (leave environment blank).
    The release workflow uses npm's OIDC provenance flow; it deliberately does
    not require an `NPM_TOKEN` secret.
+
+`codexa` is an existing npm package owned by another publisher. CODEXA is
+published under the unique scoped name `@aaravkhanal/codexa`, while its command
+remains simply `codexa`.
 
 ## Creating a release
 

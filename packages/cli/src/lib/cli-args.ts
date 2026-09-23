@@ -29,6 +29,7 @@ export interface ParsedArgs {
   profile?: string;
   executionMode?: "PLAN" | "BUILD";
   exportOutputPath?: string;
+  json?: boolean;
   /** Sub-command for `codexa config <subcommand>` e.g. "provider", "model", "reset" */
   configSubcommand?: string;
   subcommand?: string;
@@ -45,6 +46,7 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
   let cwdArg: string | undefined;
   let isStatus = false;
   let isDoctor = false;
+  let json = false;
   const filteredArgs: string[] = [];
 
   for (let i = 0; i < argv.length; i++) {
@@ -57,6 +59,8 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
       isStatus = true;
     } else if (arg === "--doctor" || arg === "doctor") {
       isDoctor = true;
+    } else if (arg === "--json") {
+      json = true;
     } else if (arg === "--model" && argv[i + 1]) {
       model = argv[++i];
     } else if ((arg === "--profile" || arg === "-p") && argv[i + 1]) {
@@ -72,7 +76,7 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
   }
 
   if (isDoctor) {
-    return { mode: "doctor", autoApprove, sandbox, model, profile, executionMode, cwdArg };
+    return { mode: "doctor", autoApprove, sandbox, model, profile, executionMode, cwdArg, json };
   }
 
   if (isStatus) {
@@ -87,7 +91,7 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
   const second = filteredArgs[1];
 
   if (first === "setup") return { mode: "setup", autoApprove, sandbox, model, profile, executionMode, cwdArg };
-  if (first === "doctor") return { mode: "doctor", autoApprove, sandbox, model, profile, executionMode, cwdArg };
+  if (first === "doctor") return { mode: "doctor", autoApprove, sandbox, model, profile, executionMode, cwdArg, json };
   if (first === "review") return { mode: "review", autoApprove, sandbox, model, profile, executionMode, cwdArg };
   if (first === "scan") return { mode: "scan", autoApprove, sandbox, model, profile, executionMode, cwdArg };
   if (first === "commit") return { mode: "commit", autoApprove, sandbox, model, profile, executionMode, cwdArg };
@@ -174,4 +178,3 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
 
 export const cliArgs = parseCliArgs();
 export default cliArgs;
-

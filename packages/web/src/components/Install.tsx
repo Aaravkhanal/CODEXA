@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Icon, writeClipboard, AnimatedSectionHeading } from "./Shared";
 
 const installOptions = [
-  { id: "npm", method: "npm", os: "macOS + Linux + Windows", command: "npm install -g codexa", step: "cd your-project && codexa" },
+  { id: "npm", method: "npm", os: "macOS + Linux + Windows", command: "npm install -g @aaravkhanal/codexa", step: "cd your-project && codexa" },
   { id: "brew", method: "Homebrew", os: "macOS + Linux", command: "brew install Aaravkhanal/tap/codexa", step: "codexa" },
   { id: "shell", method: "Curl / Shell", os: "macOS + Linux", command: "curl -fsSL https://raw.githubusercontent.com/Aaravkhanal/CODEXA/main/install.sh | sh", step: "codexa" },
   { id: "windows", method: "PowerShell", os: "Windows", command: "irm https://raw.githubusercontent.com/Aaravkhanal/CODEXA/main/install.ps1 | iex", step: "codexa" },

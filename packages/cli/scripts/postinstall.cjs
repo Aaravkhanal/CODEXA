@@ -3,7 +3,7 @@
  * CODEXA postinstall script
  *
  * Downloads the pre-compiled platform binary from GitHub releases when
- * installing via `npm install -g codexa`.
+ * installing via `npm install -g @aaravkhanal/codexa`.
  *
  * Skipped when:
  *   - CODEXA_SKIP_BINARY_DOWNLOAD=1 is set

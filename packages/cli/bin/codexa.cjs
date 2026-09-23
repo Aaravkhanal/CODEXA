@@ -2,7 +2,7 @@
 /**
  * CODEXA CLI — Node.js entry shim
  *
- * This thin wrapper is the `bin/codexa` entry point installed by `npm install -g codexa`.
+ * This thin wrapper is the `bin/codexa` entry point installed by `npm install -g @aaravkhanal/codexa`.
  * It resolves the correct pre-compiled binary for the current platform and delegates to it.
  *
  * Resolution order:
@@ -110,7 +110,7 @@ CODEXA: Could not find a compatible binary for your platform (${os.platform()}/$
 If you installed via npm, the binary may not have downloaded correctly.
 Try reinstalling:
 
-  npm install -g codexa
+  npm install -g @aaravkhanal/codexa
 
 If you cloned from GitHub, install Bun first:
 

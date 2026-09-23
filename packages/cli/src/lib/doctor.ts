@@ -173,9 +173,15 @@ export async function runDoctorChecks(cwd: string = process.cwd()): Promise<{
   return { allPassed, results };
 }
 
-export async function printDoctorReport(cwd: string = process.cwd()): Promise<boolean> {
-  console.log("\n🏥 Running CODEXA System Diagnostics...\n");
+export async function printDoctorReport(cwd: string = process.cwd(), json = false): Promise<boolean> {
   const { allPassed, results } = await runDoctorChecks(cwd);
+
+  if (json) {
+    console.log(JSON.stringify({ allPassed, results }, null, 2));
+    return allPassed;
+  }
+
+  console.log("\n🏥 Running CODEXA System Diagnostics...\n");
 
   for (const res of results) {
     const symbol = res.passed ? "✓" : "✗";

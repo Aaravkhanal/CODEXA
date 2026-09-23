@@ -37,7 +37,7 @@
 ### Install via npm
 
 ```bash
-npm install -g codexa
+npm install -g @aaravkhanal/codexa
 ```
 
 ### Install a standalone binary (no Node.js or Bun required)
@@ -79,7 +79,7 @@ codexa init
 For a one-off task without installing globally:
 
 ```bash
-npx codexa@latest "review this repository and fix the failing tests"
+npx @aaravkhanal/codexa@latest "review this repository and fix the failing tests"
 ```
 
 To update a global installation later:
@@ -187,6 +187,7 @@ Select your AI provider:
 | `codexa config reset` | Reset all global configuration |
 | `codexa init` | Initialize `.codexa/` instructions & architecture in current project |
 | `codexa doctor` | Run diagnostic checks on system, keys, and MCP tools |
+| `codexa doctor --json` | Emit the same diagnostics as JSON for CI, scripts, and support bundles |
 | `codexa status` | Output project language/framework detection status |
 | `codexa review` | Review uncommitted git changes for potential bugs |
 | `codexa commit` | Stage changes and generate a structured git commit message |

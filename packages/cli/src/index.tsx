@@ -45,7 +45,7 @@ Usage:
   codexa repo [analyze|clone|fork] <url>    Analyze, clone, or fork GitHub repositories
   codexa import <file|folder>                Import external files/folders into project
   codexa checkpoints [list|rollback]         Manage pre-task safety checkpoints
-  codexa doctor                              Run diagnostic checks on environment, keys, and MCP config
+  codexa doctor [--json]                     Run diagnostic checks on environment, keys, and MCP config
   codexa config                              Interactive AI provider & model configuration
   codexa init                                Initialize project-specific CODEXA configuration
   codexa setup                               Re-run first-time setup wizard
@@ -59,6 +59,7 @@ Options:
   -v, --version            Show the installed CODEXA version
   -y, --auto-approve       Auto-approve tool execution (non-interactive mode)
   --doctor                 Run system diagnostic checks and exit
+  --json                   Emit machine-readable output (supported by doctor)
   --model <name>           Specify model (e.g. claude-opus-4-6, gpt-4o, gemini-2.5-pro)
   --profile <name>         Use a named configuration profile
   --mode <PLAN|BUILD>      Execution mode (PLAN read-only vs BUILD write mode)
@@ -104,7 +105,7 @@ if (cliArgs.mode === "lens-export") {
 }
 
 if (cliArgs.mode === "doctor") {
-  const success = await printDoctorReport();
+  const success = await printDoctorReport(process.cwd(), cliArgs.json);
   process.exit(success ? 0 : 1);
 }
 
