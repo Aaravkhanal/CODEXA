@@ -25,7 +25,7 @@ or other credentials in GitHub variables used by the binary build.
 
 6. Configure npm trusted publishing for the `@aaravkhanal/codexa` package and
    this repository. Use GitHub owner `Aaravkhanal`, repository `CODEXA`, and
-   workflow file `.github/workflows/release.yml` (leave environment blank).
+   workflow filename `release.yml` (leave environment blank).
    The release workflow uses npm's OIDC provenance flow; it deliberately does
    not require an `NPM_TOKEN` secret.
 
