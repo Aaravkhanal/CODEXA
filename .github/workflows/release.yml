@@ -261,7 +261,22 @@ jobs:
           TAP_REPOSITORY: ${{ vars.HOMEBREW_TAP_REPOSITORY }}
         run: |
           branch="release/${GITHUB_REF_NAME}"
-          git push --set-upstream origin "$branch"
+          git push --force-with-lease --set-upstream origin "$branch"
+
+          existing_pr="$(
+            gh pr list \
+              --repo "$TAP_REPOSITORY" \
+              --head "$branch" \
+              --state open \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+
+          if [ -n "$existing_pr" ]; then
+            echo "Formula update PR already exists: #$existing_pr"
+            exit 0
+          fi
+
           gh pr create --repo "$TAP_REPOSITORY" --base main --head "$branch" \
             --title "chore: update codexa to ${GITHUB_REF_NAME}" \
             --body "Automated formula update for CODEXA ${GITHUB_REF_NAME}."

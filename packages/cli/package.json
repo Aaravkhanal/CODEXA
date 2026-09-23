@@ -1,6 +1,6 @@
 {
   "name": "@aaravkhanal/codexa",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "AI Software Engineering Agent — runs in your terminal, works in any project",
   "module": "src/index.tsx",
   "type": "module",
@@ -9,7 +9,7 @@
   "homepage": "https://github.com/Aaravkhanal/CODEXA",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Aaravkhanal/CODEXA.git"
+    "url": "git+https://github.com/Aaravkhanal/CODEXA.git"
   },
   "bugs": {
     "url": "https://github.com/Aaravkhanal/CODEXA/issues"
@@ -26,7 +26,7 @@
     "software-engineering"
   ],
   "bin": {
-    "codexa": "./bin/codexa.cjs"
+    "codexa": "bin/codexa.cjs"
   },
   "scripts": {
     "dev": "bun run --watch src/index.tsx",
