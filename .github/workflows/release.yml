@@ -247,9 +247,11 @@ jobs:
           git commit -m "chore: update codexa to ${GITHUB_REF_NAME}"
       - name: Test formula
         run: |
+          # The formula is committed locally but not pushed until these checks
+          # pass. A local tap clone can therefore discover it by its formula name.
           brew tap codexa/release "$PWD/homebrew-tap"
           brew style codexa/release/codexa
-          brew audit --strict --online codexa/release/codexa
+          brew audit --strict codexa/release/codexa
           brew install codexa/release/codexa
           brew test codexa/release/codexa
       - name: Open formula update pull request
@@ -266,6 +268,10 @@ jobs:
 
   npm:
     needs: publish
+    # npm trusted publishing can only be configured after the first package
+    # version exists. Keep bootstrap releases green while making publication
+    # opt-in through a repository variable once trust is configured.
+    if: ${{ vars.NPM_PUBLISH_READY == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -96,7 +96,7 @@ async function main() {
     return;
   }
 
-  const releaseUrl = `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/${target.artifact}.tar.gz`;
+  const releaseUrl = `https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/codexa-v${VERSION}-${target.artifact}.tar.gz`;
 
   console.log(`CODEXA: Downloading binary for ${os.platform()}/${os.arch()} (v${VERSION})...`);
   console.log(`        From: ${releaseUrl}`);

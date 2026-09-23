@@ -1,6 +1,6 @@
 {
   "name": "@aaravkhanal/codexa",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "AI Software Engineering Agent — runs in your terminal, works in any project",
   "module": "src/index.tsx",
   "type": "module",

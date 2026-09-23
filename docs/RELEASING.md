@@ -33,6 +33,26 @@ or other credentials in GitHub variables used by the binary build.
 published under the unique scoped name `@aaravkhanal/codexa`, while its command
 remains simply `codexa`.
 
+### First npm release
+
+npm trusted publishing can only be configured after a package exists. For the
+first scoped release, publish the matching version locally after its GitHub
+Release has completed:
+
+```sh
+cd packages/cli
+npm login
+npm publish --access public
+```
+
+Then configure trusted publishing for later releases. This one-time bootstrap
+avoids storing a long-lived npm token in GitHub Actions.
+
+After the first publish succeeds, add the repository Actions variable
+`NPM_PUBLISH_READY=true`. Future release tags then publish through npm's OIDC
+trusted publisher automatically. Until that variable is set, npm is explicitly
+skipped rather than producing a misleading failed release check.
+
 ## Creating a release
 
 1. Merge the release changes into `main`.
