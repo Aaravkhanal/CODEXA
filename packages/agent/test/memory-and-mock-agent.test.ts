@@ -1,5 +1,5 @@
-import { describe, expect, it, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProjectMemoryManager } from "../src/memory/project-memory.ts";
@@ -113,6 +113,29 @@ describe("Project Memory & Mock Agent Loop", () => {
     const resumeInfo = memManager.getResumeInfo();
     expect(resumeInfo.hasMemory).toBe(true);
     expect(resumeInfo.lastSummary).toBeDefined();
+  });
+
+  it("stops before coding when the safe edit preview is rejected", async () => {
+    const originalPackage = readFileSync(join(testDir, "package.json"), "utf-8");
+    let previewWasShown = false;
+    const orchestrator = new AgentOrchestrator({
+      cwd: testDir,
+      providerConfig: { provider: "mock", model: "mock-coding-model" },
+      planProviderConfig: { provider: "mock", model: "mock-fast-model" },
+      onPlanReady: async (preview) => {
+        previewWasShown = true;
+        expect(preview.rawPlan.length).toBeGreaterThan(0);
+        expect(preview.verificationCommands).toEqual(["npm test"]);
+        return false;
+      },
+    });
+
+    const result = await orchestrator.run("Add a settings route");
+    expect(previewWasShown).toBe(true);
+    expect(result.summary).toContain("cancelled before any files were changed");
+    expect(result.filesModified).toEqual([]);
+    expect(readFileSync(join(testDir, "package.json"), "utf-8")).toBe(originalPackage);
+    expect(existsSync(join(testDir, ".codexa"))).toBe(false);
   });
 
   it("creates a read-only plan without creating CODEXA metadata or changing files", async () => {

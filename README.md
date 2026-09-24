@@ -167,6 +167,7 @@ Select your AI provider:
 - **⚡ Local-First Execution**: Runs tools directly on your machine without requiring external cloud backend servers or active subscriptions.
 - **⚙️ Profile Management**: Switch profiles on the fly (`codexa --profile cheap`, `codexa --profile local`).
 - **📁 Project Memory (`.codexa/`)**: Persistent `.codexa/memory.md` capturing project purpose, architecture, decisions, and automatic session summaries across visits.
+- **🛡️ Safe Edit Preview**: Before BUILD mode writes anything, review the exact files, implementation steps, and verification command, then explicitly continue or cancel.
 - **🔒 Hardened Opt-in Docker Sandbox**: Run BUILD-mode shell execution safely (`--sandbox` / `CODEXA_SANDBOX=true`).
 - **🔍 CodexaLens Code Intelligence**: Built-in AST dependency graph, local TF-IDF code search, active context timeline recorder, and token/credit usage tracking.
 - **🧪 Zero-Credit Mock Provider**: Full agent loop testing offline without consuming API credits (`provider: "mock"`).

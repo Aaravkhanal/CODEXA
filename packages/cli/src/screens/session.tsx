@@ -1,3 +1,4 @@
+import type { SafeEditPreview } from "@codexa/agent";
 import { type ModeType, SUPPORTED_CHAT_MODELS, type SupportedChatModelId } from "@codexa/shared";
 import { useKeyboard } from "@opentui/react";
 import type { InferResponseType } from "hono/client";
@@ -100,12 +101,12 @@ function SessionChat({
   );
 
   const approvePlan = useCallback(
-    (plan: string) => {
+    (preview: SafeEditPreview) => {
       return new Promise<boolean>((resolve) => {
         dialog.open({
-          title: "Approve implementation plan",
+          title: "Safe edit preview",
           size: "fullscreen",
-          children: <ConfirmPlanDialogContent plan={plan} onConfirm={resolve} />,
+          children: <ConfirmPlanDialogContent preview={preview} onConfirm={resolve} />,
         });
       });
     },

@@ -3,6 +3,7 @@ import {
   type AgentProgressEvent,
   createLanguageModel,
   type ProviderConfig,
+  type SafeEditPreview,
 } from "@codexa/agent";
 import type { ModeType, SupportedChatModelId } from "@codexa/shared";
 import { generateText } from "ai";
@@ -48,7 +49,7 @@ function isSimpleConversation(text: string): boolean {
  */
 export function useLocalAgentChat(options?: {
   askConfirmation?: (toolName: string, details: string) => Promise<boolean>;
-  approvePlan?: (plan: string) => Promise<boolean>;
+  approvePlan?: (preview: SafeEditPreview) => Promise<boolean>;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [status, setStatus] = useState<"ready" | "streaming">("ready");
@@ -98,7 +99,7 @@ export function useLocalAgentChat(options?: {
             autoApprove: cliArgs.autoApprove,
             onConfirmDangerous: async (command, reason) =>
               options?.askConfirmation?.(command, reason) ?? false,
-            onPlanReady: async (generatedPlan) => options?.approvePlan?.(generatedPlan) ?? true,
+            onPlanReady: async (preview) => options?.approvePlan?.(preview) ?? true,
             onProgress: (event) => {
               setProgress(event);
               if (event.phase === "planning" && event.detail) setPlan(event.detail);

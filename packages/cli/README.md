@@ -44,7 +44,7 @@ unavailable, it can still run from source when Bun is installed.
 ## Security model
 
 - API keys are stored locally and are never sent to CODEXA telemetry.
-- PLAN mode is read-only; BUILD mode presents tool permission prompts.
+- PLAN mode is read-only; BUILD mode shows an exact file/plan/test preview before creating metadata or changing project files.
 - `codexa doctor --json` is designed for reproducible onboarding and CI checks.
 
 See the [repository documentation](https://github.com/Aaravkhanal/CODEXA) for

@@ -57,6 +57,13 @@ export interface TestResult {
   exitCode: number;
 }
 
+export interface SafeEditPreview {
+  files: string[];
+  steps: string[];
+  verificationCommands: string[];
+  rawPlan: string;
+}
+
 export interface OrchestratorOptions {
   /** Provider configuration for the primary (coding) model */
   providerConfig: ProviderConfig;
@@ -74,8 +81,8 @@ export interface OrchestratorOptions {
   onConfirmDangerous?: (command: string, description: string) => Promise<boolean>;
   /** Callback to stream progress events to the TUI */
   onProgress?: (event: AgentProgressEvent) => void;
-  /** Lets an interactive client approve the plan before code can be changed. */
-  onPlanReady?: (plan: string) => Promise<boolean>;
+  /** Lets an interactive client approve the exact edit preview before code can be changed. */
+  onPlanReady?: (preview: SafeEditPreview) => Promise<boolean>;
 }
 
 export interface OrchestratorResult {
@@ -152,10 +159,7 @@ export class AgentOrchestrator {
     let testsRun = false;
 
     try {
-      // ── Phase 0: Pre-task Checkpoint & Skill Matching ──────────────────
-      emit({ phase: "exploring", message: "Creating safety checkpoint..." });
-      this.checkpointManager.createCheckpoint(`Pre-task: ${task.slice(0, 40)}`);
-
+      // ── Phase 0: Skill Matching (read-only until preview approval) ─────
       const detectedSkills = this.skillManager.detectSkillsForTask(task);
       const skillInstructions = detectedSkills
         .map(
@@ -174,8 +178,9 @@ export class AgentOrchestrator {
         message: "Analyzing project structure & Knowledge Graph...",
         detail: skillsDetail,
       });
-      const graph = this.projectIndexer.getOrBuildGraph();
-      const projectMemory = this.memoryManager.getOrInitMemory(graph);
+      const graph = this.projectIndexer.generateKnowledgeGraph(false);
+      const projectMemory =
+        this.memoryManager.readMemory() ?? "No previous project memory recorded.";
       const graphContextStr = `Project Name: ${graph.projectName}\nFrameworks: ${graph.frameworks.join(", ") || "none"}\nLanguages: ${graph.languages.join(", ") || "none"}\nPackage Manager: ${graph.packageManager}\nDatabase: ${graph.databaseType || "none"}\nArchitecture Notes: ${graph.architectureNotes.join("; ") || "standard"}\n\nProject Memory:\n${projectMemory.slice(0, 3000)}`;
 
       const context = await this.contextEngine.buildContext(task);
@@ -194,9 +199,19 @@ export class AgentOrchestrator {
       // ── Phase 2: Planner ─────────────────────────────────────────────────
       emit({ phase: "planning", message: "Creating implementation plan..." });
       const plan = await this.runPlanner(task, context, explorationSummary, skillInstructions);
-      emit({ phase: "planning", message: "✓ Plan ready", detail: plan });
+      const verificationCommand = this.detectTestCommand(context);
+      const preview = createSafeEditPreview(
+        plan,
+        context.files.map((file) => file.path),
+        verificationCommand ? [verificationCommand] : [],
+      );
+      emit({
+        phase: "planning",
+        message: "✓ Safe edit preview ready",
+        detail: formatSafeEditPreview(preview),
+      });
 
-      const planApproved = await this.options.onPlanReady(plan);
+      const planApproved = await this.options.onPlanReady(preview);
       if (!planApproved) {
         const summary = "Implementation cancelled before any files were changed.";
         emit({ phase: "done", message: summary });
@@ -213,6 +228,11 @@ export class AgentOrchestrator {
           durationMs: Date.now() - startMs,
         };
       }
+
+      // Approval is the first point where CODEXA may write project metadata.
+      emit({ phase: "exploring", message: "Creating safety checkpoint..." });
+      this.checkpointManager.createCheckpoint(`Pre-task: ${task.slice(0, 40)}`);
+      this.projectIndexer.generateKnowledgeGraph(true);
 
       // ── Phase 3: Coder & Dependency Check ───────────────────────────────
       emit({ phase: "coding", message: "Verifying project dependencies..." });
@@ -343,9 +363,7 @@ export class AgentOrchestrator {
    * Analyze a task and return an implementation plan without invoking tools,
    * creating checkpoints, installing dependencies, or editing project files.
    */
-  async plan(
-    task: string,
-  ): Promise<{
+  async plan(task: string): Promise<{
     plan: string;
     totalTokensUsed: number;
     inputTokensUsed: number;
@@ -496,29 +514,7 @@ export class AgentOrchestrator {
   }
 
   private async runTester(context: ProjectContext): Promise<TestResult> {
-    // Detect test/build commands from context
-    const pkgJson = context.files.find((f) => f.path === "package.json");
-    let testCommand: string | null = null;
-
-    if (pkgJson) {
-      try {
-        const pkg = JSON.parse(pkgJson.content);
-        if (pkg.scripts?.test) testCommand = "npm test";
-        else if (pkg.scripts?.["test:run"]) testCommand = "npm run test:run";
-      } catch {}
-    }
-
-    if (!testCommand) {
-      // Check for other ecosystems
-      const hasPyproject = context.files.some((f) => f.path === "pyproject.toml");
-      const hasRequirements = context.files.some((f) => f.path === "requirements.txt");
-      const hasCargo = context.files.some((f) => f.path === "Cargo.toml");
-      const hasGoMod = context.files.some((f) => f.path === "go.mod");
-
-      if (hasPyproject || hasRequirements) testCommand = "python -m pytest";
-      else if (hasCargo) testCommand = "cargo test";
-      else if (hasGoMod) testCommand = "go test ./...";
-    }
+    const testCommand = this.detectTestCommand(context);
 
     if (!testCommand) {
       return {
@@ -546,6 +542,33 @@ export class AgentOrchestrator {
       output: [result.stdout, result.stderr].filter(Boolean).join("\n"),
       exitCode: result.exitCode,
     };
+  }
+
+  private detectTestCommand(context: ProjectContext): string | null {
+    const pkgJson = context.files.find((file) => file.path === "package.json");
+    if (pkgJson) {
+      try {
+        const pkg = JSON.parse(pkgJson.content) as { scripts?: Record<string, string> };
+        const packageManager = this.dependencyManager.planDependencies([]).packageManager;
+        const runScript = (script: string) => {
+          if (packageManager === "bun") return `bun run ${script}`;
+          if (packageManager === "yarn") return `yarn ${script}`;
+          if (packageManager === "pnpm") return `pnpm ${script}`;
+          return script === "test" ? "npm test" : `npm run ${script}`;
+        };
+        if (pkg.scripts?.test) return runScript("test");
+        if (pkg.scripts?.["test:run"]) return runScript("test:run");
+        if (pkg.scripts?.check) return runScript("check");
+      } catch {
+        // Fall through to ecosystem-based detection.
+      }
+    }
+
+    const paths = new Set(context.files.map((file) => file.path));
+    if (paths.has("pyproject.toml") || paths.has("requirements.txt")) return "python -m pytest";
+    if (paths.has("Cargo.toml")) return "cargo test";
+    if (paths.has("go.mod")) return "go test ./...";
+    return null;
   }
 
   private async runDebugger(
@@ -626,6 +649,95 @@ export class AgentOrchestrator {
 }
 
 // ---------------------------------------------------------------------------
+// Safe edit preview
+// ---------------------------------------------------------------------------
+
+function cleanListItem(line: string): string {
+  return line
+    .trim()
+    .replace(/^[-*•]\s+/, "")
+    .replace(/^\d+[.)]\s+/, "")
+    .trim();
+}
+
+function isLikelyFilePath(value: string, knownFiles: Set<string>): boolean {
+  if (knownFiles.has(value)) return true;
+  if (value.startsWith("/") || value.includes("..") || /[<>|]/.test(value)) return false;
+  return /^(?:[\w@.+-]+\/)*[\w@.+-]+\.[A-Za-z0-9]+$/.test(value);
+}
+
+/** Convert the planner's structured response into the exact approval payload shown before edits. */
+export function createSafeEditPreview(
+  rawPlan: string,
+  knownFilePaths: string[] = [],
+  verificationCommands: string[] = [],
+): SafeEditPreview {
+  const knownFiles = new Set(knownFilePaths);
+  const lines = rawPlan.split(/\r?\n/);
+  const filesHeading = lines.findIndex((line) =>
+    /^#{0,3}\s*files to change\s*:?\s*$/i.test(line.trim()),
+  );
+  const planHeading = lines.findIndex((line) => /^#{0,3}\s*plan\s*:?\s*$/i.test(line.trim()));
+  const verificationHeading = lines.findIndex((line) =>
+    /^#{0,3}\s*(verification|tests?|commands?)\s*:?\s*$/i.test(line.trim()),
+  );
+
+  const fileLines =
+    filesHeading >= 0
+      ? lines.slice(filesHeading + 1, planHeading > filesHeading ? planHeading : undefined)
+      : [];
+  const files = fileLines
+    .map(cleanListItem)
+    .map((line) => line.match(/`([^`]+)`/)?.[1] ?? line.split(/\s+[—–]\s+/)[0]?.trim() ?? "")
+    .filter((candidate) => isLikelyFilePath(candidate, knownFiles));
+
+  if (files.length === 0) {
+    for (const knownFile of knownFilePaths) {
+      if (rawPlan.includes(knownFile)) files.push(knownFile);
+    }
+    for (const match of rawPlan.matchAll(/`((?:[\w@.+-]+\/)*[\w@.+-]+\.[A-Za-z0-9]+)`/g)) {
+      const candidate = match[1];
+      if (candidate && isLikelyFilePath(candidate, knownFiles)) files.push(candidate);
+    }
+  }
+
+  const planEnd = verificationHeading > planHeading ? verificationHeading : lines.length;
+  let steps =
+    planHeading >= 0
+      ? lines
+          .slice(planHeading + 1, planEnd)
+          .map(cleanListItem)
+          .filter(Boolean)
+      : lines
+          .map(cleanListItem)
+          .filter((line) => line.length > 0 && !/^files to change:?$/i.test(line));
+  steps = steps.filter((step) => !isLikelyFilePath(step.replace(/`/g, ""), knownFiles));
+
+  return {
+    files: [...new Set(files)],
+    steps: [...new Set(steps)],
+    verificationCommands: [...new Set(verificationCommands.filter(Boolean))],
+    rawPlan,
+  };
+}
+
+export function formatSafeEditPreview(preview: SafeEditPreview): string {
+  const files =
+    preview.files.length > 0
+      ? preview.files.map((file) => `- ${file}`).join("\n")
+      : "- No files identified — review carefully before continuing";
+  const steps =
+    preview.steps.length > 0
+      ? preview.steps.map((step) => `- ${step}`).join("\n")
+      : "- Implement the requested change";
+  const verification =
+    preview.verificationCommands.length > 0
+      ? preview.verificationCommands.map((command) => `- ${command}`).join("\n")
+      : "- No verification command detected";
+  return `Files to change:\n${files}\n\nPlan:\n${steps}\n\nVerification:\n${verification}`;
+}
+
+// ---------------------------------------------------------------------------
 // System prompts
 // ---------------------------------------------------------------------------
 
@@ -637,8 +749,18 @@ Be concise. Output a 3-5 sentence summary of:
 3. What approach would work best`;
 
 const PLANNER_SYSTEM_PROMPT = `You are the Planner agent in CODEXA's multi-agent AI coding system.
-Your role is to create a detailed, numbered, step-by-step implementation plan.
-Be specific about which files to modify and what changes to make.
+Your role is to create a concise, safe implementation preview.
+Return exactly these two sections:
+
+Files to change:
+- path/to/file.ext
+
+Plan:
+- one concrete change
+- another concrete change
+
+List every file that may be created, edited, moved, or deleted. Put only a repository-relative path on each file line.
+Keep plan steps short, specific, and user-facing.
 Do NOT implement code — only plan.
 Be actionable and precise.`;
 

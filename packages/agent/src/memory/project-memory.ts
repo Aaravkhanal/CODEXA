@@ -11,7 +11,14 @@
  * NEVER stores API keys, credentials, or private tokens in project memory.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { ProjectKnowledgeGraph } from "@codexa/shared";
 
@@ -56,12 +63,24 @@ export class ProjectMemoryManager {
 
   public ensureDirs(): void {
     if (!existsSync(this.codexaDir)) mkdirSync(this.codexaDir, { recursive: true, mode: 0o755 });
-    if (!existsSync(this.sessionsDir)) mkdirSync(this.sessionsDir, { recursive: true, mode: 0o755 });
-    if (!existsSync(this.summariesDir)) mkdirSync(this.summariesDir, { recursive: true, mode: 0o755 });
+    if (!existsSync(this.sessionsDir))
+      mkdirSync(this.sessionsDir, { recursive: true, mode: 0o755 });
+    if (!existsSync(this.summariesDir))
+      mkdirSync(this.summariesDir, { recursive: true, mode: 0o755 });
   }
 
   public hasMemory(): boolean {
     return existsSync(this.memoryFile) || existsSync(this.summariesDir);
+  }
+
+  /** Read existing project memory without creating files or directories. */
+  public readMemory(): string | null {
+    if (!existsSync(this.memoryFile)) return null;
+    try {
+      return readFileSync(this.memoryFile, "utf-8");
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -118,7 +137,10 @@ Student software engineering workspace.
    */
   public recordSessionSummary(entry: SessionSummaryEntry): void {
     this.ensureDirs();
-    const summaryFile = join(this.summariesDir, `${entry.timestamp}_${entry.sessionId.slice(0, 8)}.json`);
+    const summaryFile = join(
+      this.summariesDir,
+      `${entry.timestamp}_${entry.sessionId.slice(0, 8)}.json`,
+    );
     writeFileSync(summaryFile, JSON.stringify(entry, null, 2), "utf-8");
 
     // Incrementally update memory.md without blowing away architecture notes
@@ -174,7 +196,9 @@ Student software engineering workspace.
       lastSummary: latestEntry?.summary || "Previous tasks recorded in .codexa/memory.md",
       filesModified: latestEntry?.filesModified,
       testsPassed: latestEntry?.testsPassed,
-      memoryContent: existsSync(this.memoryFile) ? readFileSync(this.memoryFile, "utf-8") : undefined,
+      memoryContent: existsSync(this.memoryFile)
+        ? readFileSync(this.memoryFile, "utf-8")
+        : undefined,
     };
   }
 
@@ -196,9 +220,13 @@ Student software engineering workspace.
         try {
           const parsed = JSON.parse(raw);
           if (typeof parsed === "object" && parsed !== null) {
-            importedMarkdown = `# Imported Project Memory\n\n` +
+            importedMarkdown =
+              `# Imported Project Memory\n\n` +
               Object.entries(parsed)
-                .map(([k, v]) => `## ${k}\n${typeof v === "object" ? JSON.stringify(v, null, 2) : String(v)}`)
+                .map(
+                  ([k, v]) =>
+                    `## ${k}\n${typeof v === "object" ? JSON.stringify(v, null, 2) : String(v)}`,
+                )
                 .join("\n\n");
           }
         } catch {}
@@ -208,7 +236,10 @@ Student software engineering workspace.
       const merged = `${existing}\n\n<!-- Imported from ${sourcePath} at ${new Date().toISOString()} -->\n${importedMarkdown}`;
       this.saveMemory(merged);
 
-      return { success: true, message: `Imported memory from ${sourcePath} into .codexa/memory.md` };
+      return {
+        success: true,
+        message: `Imported memory from ${sourcePath} into .codexa/memory.md`,
+      };
     } catch (err: any) {
       return { success: false, message: `Failed to import memory: ${err.message}` };
     }
@@ -225,10 +256,14 @@ Student software engineering workspace.
     let exportContent = `# CodeXA Project Memory Export: ${this.cwd.split(/[/\\]/).pop()}\nGenerated: ${new Date().toISOString()}\n\n${memory}\n\n## Session History Archive\n`;
 
     if (existsSync(this.summariesDir)) {
-      const files = readdirSync(this.summariesDir).filter((f) => f.endsWith(".json")).sort();
+      const files = readdirSync(this.summariesDir)
+        .filter((f) => f.endsWith(".json"))
+        .sort();
       for (const file of files) {
         try {
-          const item: SessionSummaryEntry = JSON.parse(readFileSync(join(this.summariesDir, file), "utf-8"));
+          const item: SessionSummaryEntry = JSON.parse(
+            readFileSync(join(this.summariesDir, file), "utf-8"),
+          );
           exportContent += `\n### Session ${item.sessionId.slice(0, 8)} (${new Date(item.timestamp).toLocaleString()})\n- **Task**: ${item.task}\n- **Summary**: ${item.summary}\n- **Files**: ${item.filesModified.join(", ") || "None"}\n`;
         } catch {}
       }
@@ -263,11 +298,14 @@ Student software engineering workspace.
    */
   public clearMemory(): void {
     if (existsSync(this.memoryFile)) {
-      try { unlinkSync(this.memoryFile); } catch {}
+      try {
+        unlinkSync(this.memoryFile);
+      } catch {}
     }
     if (existsSync(this.projectMapFile)) {
-      try { unlinkSync(this.projectMapFile); } catch {}
+      try {
+        unlinkSync(this.projectMapFile);
+      } catch {}
     }
   }
 }
-
