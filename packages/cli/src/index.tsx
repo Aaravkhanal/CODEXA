@@ -1,21 +1,25 @@
 declare const CODEXA_VERSION: string | undefined;
 declare const CODEXA_OPENTUI_LIBC: string | undefined;
 
-import { cliArgs } from "./lib/cli-args";
-import { detectProject } from "./lib/project-detector";
-import { printDoctorReport } from "./lib/doctor";
-import { exportSessionTimeline } from "./lib/lens-export";
-import { runSetupWizard } from "./lib/setup-wizard";
-import { runConfigCommand } from "./lib/config-cmd";
-import { runInitCommand } from "./lib/init-cmd";
-import { runSkillCommand } from "./lib/skill-cmd";
-import { runRepoCommand } from "./lib/repo-cmd";
-import { runImportCommand } from "./lib/import-cmd";
-import { runCheckpointCommand } from "./lib/checkpoint-cmd";
-import { isFirstRun, migrateFromLegacyApiKeys } from "./lib/global-config";
 import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { runCheckpointCommand } from "./lib/checkpoint-cmd";
+import { cliArgs } from "./lib/cli-args";
+import { runConfigCommand } from "./lib/config-cmd";
+import { printDoctorReport } from "./lib/doctor";
+import {
+  bootstrapGlobalConfigFromEnv,
+  isFirstRun,
+  migrateFromLegacyApiKeys,
+} from "./lib/global-config";
+import { runImportCommand } from "./lib/import-cmd";
+import { runInitCommand } from "./lib/init-cmd";
+import { exportSessionTimeline } from "./lib/lens-export";
+import { detectProject } from "./lib/project-detector";
+import { runRepoCommand } from "./lib/repo-cmd";
+import { runSetupWizard } from "./lib/setup-wizard";
+import { runSkillCommand } from "./lib/skill-cmd";
 
 const version = typeof CODEXA_VERSION === "string" ? CODEXA_VERSION : "dev";
 const args = process.argv.slice(2);
@@ -45,7 +49,7 @@ Usage:
   codexa repo [analyze|clone|fork] <url>    Analyze, clone, or fork GitHub repositories
   codexa import <file|folder>                Import external files/folders into project
   codexa checkpoints [list|rollback]         Manage pre-task safety checkpoints
-  codexa doctor [--json]                     Run diagnostic checks on environment, keys, and MCP config
+  codexa doctor [--json]                     Verify model, project, tooling, permissions, and installation
   codexa config                              Interactive AI provider & model configuration
   codexa init                                Initialize project-specific CODEXA configuration
   codexa setup                               Re-run first-time setup wizard
@@ -70,6 +74,7 @@ Options:
 // ── One-time migration from legacy api-keys.json ──────────────────────────
 try {
   migrateFromLegacyApiKeys();
+  bootstrapGlobalConfigFromEnv();
 } catch {
   // Non-fatal
 }
@@ -158,12 +163,13 @@ if (cliArgs.mode === "commit") {
       console.log("No uncommitted changes found in Git repository.");
       process.exit(0);
     } else {
-      console.log("Uncommitted changes detected:\n" + status);
+      console.log(`Uncommitted changes detected:\n${status}`);
       console.log("\nStaging files and launching CODEXA session to generate commit...");
       await import("./app");
     }
-  } catch (err: any) {
-    console.error("Git commit command failed:", err.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("Git commit command failed:", message);
     process.exit(1);
   }
 } else {

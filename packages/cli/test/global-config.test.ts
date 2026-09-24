@@ -14,6 +14,9 @@ const {
   getCredentials,
   getAllProfiles,
   deleteProfile,
+  bootstrapGlobalConfigFromEnv,
+  getActiveProviderConfig,
+  isFirstRun,
 } = await import("../src/lib/global-config.ts");
 
 describe("Global Config & Profile Management", () => {
@@ -60,5 +63,43 @@ describe("Global Config & Profile Management", () => {
 
     deleteProfile("fast");
     expect(getProfile("fast")).toBeNull();
+  });
+
+  it("bootstraps a usable profile from an environment API key without storing it", () => {
+    const previousConfigDir = process.env.CODEXA_CONFIG_DIR;
+    const providerVariables = [
+      "ANTHROPIC_API_KEY",
+      "OPENAI_API_KEY",
+      "GOOGLE_API_KEY",
+      "GEMINI_API_KEY",
+      "GROQ_API_KEY",
+      "OPENROUTER_API_KEY",
+    ] as const;
+    const previousValues = Object.fromEntries(
+      providerVariables.map((name) => [name, process.env[name]]),
+    );
+
+    try {
+      process.env.CODEXA_CONFIG_DIR = mkdtempSync(join(tmpdir(), "codexa-env-bootstrap-test-"));
+      for (const name of providerVariables) delete process.env[name];
+      process.env.OPENAI_API_KEY = "sk-env-only-test";
+
+      expect(isFirstRun()).toBe(true);
+      expect(bootstrapGlobalConfigFromEnv()).toBe(true);
+      expect(bootstrapGlobalConfigFromEnv()).toBe(false);
+
+      const active = getActiveProviderConfig();
+      expect(active?.profile.provider).toBe("openai");
+      expect(active?.profile.model).toBe("gpt-4o");
+      expect(active?.apiKey).toBe("sk-env-only-test");
+      expect(getCredentials("default")?.apiKey).toBeUndefined();
+    } finally {
+      process.env.CODEXA_CONFIG_DIR = previousConfigDir;
+      for (const name of providerVariables) {
+        const previous = previousValues[name];
+        if (previous === undefined) delete process.env[name];
+        else process.env[name] = previous;
+      }
+    }
   });
 });

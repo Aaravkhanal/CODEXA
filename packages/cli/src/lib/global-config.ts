@@ -12,12 +12,7 @@
  *   └── auth.json         ← cloud auth token (existing, preserved)
  */
 
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import type { ProviderName } from "@codexa/agent";
@@ -145,16 +140,6 @@ export function isFirstRun(): boolean {
     // ignore read errors
   }
 
-  // Check environment variables — if any AI key is set, treat as configured
-  const envProviders = [
-    process.env.ANTHROPIC_API_KEY,
-    process.env.OPENAI_API_KEY,
-    process.env.GOOGLE_API_KEY,
-    process.env.GEMINI_API_KEY,
-    process.env.GROQ_API_KEY,
-  ];
-  if (envProviders.some(Boolean)) return false;
-
   return true;
 }
 
@@ -266,7 +251,7 @@ export function getActiveProviderConfig(profileName?: string): {
   };
 }
 
-function getEnvKeyForProvider(provider: ProviderName): string | undefined {
+export function getEnvKeyForProvider(provider: ProviderName): string | undefined {
   switch (provider) {
     case "anthropic":
       return process.env.ANTHROPIC_API_KEY;
@@ -282,6 +267,52 @@ function getEnvKeyForProvider(provider: ProviderName): string | undefined {
     case "custom":
       return undefined;
   }
+}
+
+export function getEnvVarNameForProvider(provider: ProviderName): string | undefined {
+  switch (provider) {
+    case "anthropic":
+      return "ANTHROPIC_API_KEY";
+    case "openai":
+      return "OPENAI_API_KEY";
+    case "google":
+      return process.env.GOOGLE_API_KEY ? "GOOGLE_API_KEY" : "GEMINI_API_KEY";
+    case "groq":
+      return "GROQ_API_KEY";
+    case "openrouter":
+      return "OPENROUTER_API_KEY";
+    case "ollama":
+    case "custom":
+      return undefined;
+  }
+}
+
+/**
+ * Create a usable default profile when a user already supplies an API key via
+ * their shell environment. The key is never copied to disk; normal provider
+ * resolution continues to read it from the environment at runtime.
+ */
+export function bootstrapGlobalConfigFromEnv(): boolean {
+  if (getGlobalConfig() !== null) return false;
+
+  const provider = (["anthropic", "openai", "google", "groq", "openrouter"] as ProviderName[]).find(
+    (candidate) => Boolean(getEnvKeyForProvider(candidate)),
+  );
+  if (!provider) return false;
+
+  const model = getDefaultModelForProvider(provider);
+  saveProfile({ name: "default", provider, model });
+  saveCredentials("default", { provider, model });
+  saveGlobalConfig({
+    version: 1,
+    activeProfile: "default",
+    preferences: {
+      autoApprove: false,
+      tokenBudget: 80_000,
+      showCostEstimates: true,
+    },
+  });
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -313,13 +344,13 @@ export function migrateFromLegacyApiKeys(): void {
       if (!provider || !apiKey) continue;
 
       // Only migrate if no default profile exists yet
-      if (!creds["default"]) {
+      if (!creds.default) {
         const defaultModel = getDefaultModelForProvider(provider);
-        creds["default"] = { provider, apiKey, model: defaultModel };
+        creds.default = { provider, apiKey, model: defaultModel };
 
         // Also create the profile entry
         const store = readProfiles();
-        store["default"] = { name: "default", provider, model: defaultModel };
+        store.default = { name: "default", provider, model: defaultModel };
         writeProfiles(store);
 
         // Create global config
@@ -347,16 +378,24 @@ export function migrateFromLegacyApiKeys(): void {
   }
 }
 
-function getDefaultModelForProvider(provider: ProviderName): string {
+export function getDefaultModelForProvider(provider: ProviderName): string {
   switch (provider) {
-    case "anthropic": return "claude-opus-4-6";
-    case "openai": return "gpt-4o";
-    case "google": return "gemini-2.5-pro";
-    case "groq": return "llama-3.3-70b-versatile";
-    case "ollama": return "llama3.2";
-    case "openrouter": return "openai/gpt-4o";
-    case "custom": return "gpt-4";
-    default: return "gpt-4o";
+    case "anthropic":
+      return "claude-opus-4-6";
+    case "openai":
+      return "gpt-4o";
+    case "google":
+      return "gemini-2.5-pro";
+    case "groq":
+      return "llama-3.3-70b-versatile";
+    case "ollama":
+      return "llama3.2";
+    case "openrouter":
+      return "openai/gpt-4o";
+    case "custom":
+      return "gpt-4";
+    default:
+      return "gpt-4o";
   }
 }
 
@@ -381,7 +420,10 @@ export function setApiKey(provider: string, key: string): void {
   const allProfiles = readProfiles();
   const profile = Object.values(allProfiles).find((p) => p.provider === provider);
   if (profile) {
-    const existing = getCredentials(profile.name) ?? { provider: provider as ProviderName, model: profile.model };
+    const existing = getCredentials(profile.name) ?? {
+      provider: provider as ProviderName,
+      model: profile.model,
+    };
     saveCredentials(profile.name, { ...existing, apiKey: key });
   }
 }
