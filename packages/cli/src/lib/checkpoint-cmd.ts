@@ -4,7 +4,10 @@
 
 import { CheckpointManager } from "@codexa/agent";
 
-export async function runCheckpointCommand(subcommand = "list", subArgs: string[] = []): Promise<void> {
+export async function runCheckpointCommand(
+  subcommand = "list",
+  subArgs: string[] = [],
+): Promise<boolean> {
   const manager = new CheckpointManager(process.cwd());
 
   switch (subcommand) {
@@ -20,7 +23,7 @@ export async function runCheckpointCommand(subcommand = "list", subArgs: string[
         });
       }
       console.log();
-      break;
+      return true;
     }
     case "rollback":
     case "restore": {
@@ -29,10 +32,11 @@ export async function runCheckpointCommand(subcommand = "list", subArgs: string[
       const res = manager.rollbackCheckpoint(targetId);
       if (res.success) console.log(`✓ ${res.message}\n`);
       else console.log(`✗ ${res.message}\n`);
-      break;
+      return res.success;
     }
     default: {
       console.log("Usage: codexa checkpoints [list|rollback [id]]");
+      return false;
     }
   }
 }

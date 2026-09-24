@@ -17,6 +17,9 @@ export type CliMode =
   | "repo"
   | "import"
   | "checkpoints"
+  | "history"
+  | "resume"
+  | "rollback"
   | "task";
 
 export interface ParsedArgs {
@@ -35,6 +38,7 @@ export interface ParsedArgs {
   subcommand?: string;
   subArgs?: string[];
   cwdArg?: string;
+  sessionId?: string;
 }
 
 export function parseCliArgs(argv: string[] = args): ParsedArgs {
@@ -51,7 +55,12 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
-    if (arg === "-y" || arg === "--yes" || arg === "--auto-approve" || arg === "--dangerously-skip-permissions") {
+    if (
+      arg === "-y" ||
+      arg === "--yes" ||
+      arg === "--auto-approve" ||
+      arg === "--dangerously-skip-permissions"
+    ) {
       autoApprove = true;
     } else if (arg === "--sandbox") {
       sandbox = true;
@@ -90,12 +99,18 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
   const first = filteredArgs[0]!;
   const second = filteredArgs[1];
 
-  if (first === "setup") return { mode: "setup", autoApprove, sandbox, model, profile, executionMode, cwdArg };
-  if (first === "doctor") return { mode: "doctor", autoApprove, sandbox, model, profile, executionMode, cwdArg, json };
-  if (first === "review") return { mode: "review", autoApprove, sandbox, model, profile, executionMode, cwdArg };
-  if (first === "scan") return { mode: "scan", autoApprove, sandbox, model, profile, executionMode, cwdArg };
-  if (first === "commit") return { mode: "commit", autoApprove, sandbox, model, profile, executionMode, cwdArg };
-  if (first === "init") return { mode: "init", autoApprove, sandbox, model, profile, executionMode, cwdArg };
+  if (first === "setup")
+    return { mode: "setup", autoApprove, sandbox, model, profile, executionMode, cwdArg };
+  if (first === "doctor")
+    return { mode: "doctor", autoApprove, sandbox, model, profile, executionMode, cwdArg, json };
+  if (first === "review")
+    return { mode: "review", autoApprove, sandbox, model, profile, executionMode, cwdArg };
+  if (first === "scan")
+    return { mode: "scan", autoApprove, sandbox, model, profile, executionMode, cwdArg };
+  if (first === "commit")
+    return { mode: "commit", autoApprove, sandbox, model, profile, executionMode, cwdArg };
+  if (first === "init")
+    return { mode: "init", autoApprove, sandbox, model, profile, executionMode, cwdArg };
   if (first === "skills" || first === "skill") {
     return {
       mode: "skill",
@@ -148,10 +163,47 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
       cwdArg,
     };
   }
+  if (first === "history") {
+    return { mode: "history", autoApprove, sandbox, model, profile, executionMode, cwdArg };
+  }
+  if (first === "resume") {
+    return {
+      mode: "resume",
+      sessionId: second,
+      autoApprove,
+      sandbox,
+      model,
+      profile,
+      executionMode,
+      cwdArg,
+    };
+  }
+  if (first === "rollback") {
+    return {
+      mode: "rollback",
+      subArgs: filteredArgs.slice(1),
+      autoApprove,
+      sandbox,
+      model,
+      profile,
+      executionMode,
+      cwdArg,
+    };
+  }
   if (first === "config") {
     // `codexa config [provider|model|reset]`
-    const configSubcommand = second && ["provider", "model", "reset"].includes(second) ? second : undefined;
-    return { mode: "config", configSubcommand, autoApprove, sandbox, model, profile, executionMode, cwdArg };
+    const configSubcommand =
+      second && ["provider", "model", "reset"].includes(second) ? second : undefined;
+    return {
+      mode: "config",
+      configSubcommand,
+      autoApprove,
+      sandbox,
+      model,
+      profile,
+      executionMode,
+      cwdArg,
+    };
   }
   if (first === "lens" && second === "export") {
     return {
@@ -166,14 +218,41 @@ export function parseCliArgs(argv: string[] = args): ParsedArgs {
     };
   }
   if (first === "explain") {
-    return { mode: "explain", targetFile: filteredArgs[1], autoApprove, sandbox, model, profile, executionMode, cwdArg };
+    return {
+      mode: "explain",
+      targetFile: filteredArgs[1],
+      autoApprove,
+      sandbox,
+      model,
+      profile,
+      executionMode,
+      cwdArg,
+    };
   }
   if (first === "plan") {
-    return { mode: "plan", taskPrompt: filteredArgs.slice(1).join(" "), autoApprove, sandbox, model, profile, executionMode: "PLAN", cwdArg };
+    return {
+      mode: "plan",
+      taskPrompt: filteredArgs.slice(1).join(" "),
+      autoApprove,
+      sandbox,
+      model,
+      profile,
+      executionMode: "PLAN",
+      cwdArg,
+    };
   }
 
   // Any positional argument string is treated as a direct task prompt
-  return { mode: "task", taskPrompt: filteredArgs.join(" "), autoApprove, sandbox, model, profile, executionMode, cwdArg };
+  return {
+    mode: "task",
+    taskPrompt: filteredArgs.join(" "),
+    autoApprove,
+    sandbox,
+    model,
+    profile,
+    executionMode,
+    cwdArg,
+  };
 }
 
 export const cliArgs = parseCliArgs();

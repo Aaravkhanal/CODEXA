@@ -40,5 +40,7 @@ bench/results/
 
 # codexa runtime state
 .codexa/state/
-
+.codexa/sessions/
+.codexa/summaries/
+.codexa/checkpoints/
 

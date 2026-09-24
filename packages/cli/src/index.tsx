@@ -13,6 +13,7 @@ import {
   isFirstRun,
   migrateFromLegacyApiKeys,
 } from "./lib/global-config";
+import { resolveResumePrompt, runHistoryCommand } from "./lib/history-cmd";
 import { runImportCommand } from "./lib/import-cmd";
 import { runInitCommand } from "./lib/init-cmd";
 import { exportSessionTimeline } from "./lib/lens-export";
@@ -49,6 +50,9 @@ Usage:
   codexa repo [analyze|clone|fork] <url>    Analyze, clone, or fork GitHub repositories
   codexa import <file|folder>                Import external files/folders into project
   codexa checkpoints [list|rollback]         Manage pre-task safety checkpoints
+  codexa history                             List locally saved task history
+  codexa resume [session-id]                 Continue the latest or selected saved task
+  codexa rollback [checkpoint-id]            Restore the latest or selected checkpoint
   codexa doctor [--json]                     Verify model, project, tooling, permissions, and installation
   codexa config                              Interactive AI provider & model configuration
   codexa init                                Initialize project-specific CODEXA configuration
@@ -99,6 +103,25 @@ if (cliArgs.mode === "import") {
 if (cliArgs.mode === "checkpoints") {
   await runCheckpointCommand(cliArgs.subcommand, cliArgs.subArgs);
   process.exit(0);
+}
+
+if (cliArgs.mode === "history") {
+  process.exit(runHistoryCommand());
+}
+
+if (cliArgs.mode === "rollback") {
+  const success = await runCheckpointCommand("rollback", cliArgs.subArgs);
+  process.exit(success ? 0 : 1);
+}
+
+if (cliArgs.mode === "resume") {
+  const result = resolveResumePrompt(cliArgs.sessionId);
+  if (!result.prompt) {
+    console.error(`\n${result.error}\n`);
+    process.exit(1);
+  }
+  cliArgs.mode = "task";
+  cliArgs.taskPrompt = result.prompt;
 }
 
 if (cliArgs.mode === "lens-export") {

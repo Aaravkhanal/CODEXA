@@ -189,6 +189,9 @@ Select your AI provider:
 | `codexa init` | Initialize `.codexa/` instructions & architecture in current project |
 | `codexa doctor` | Run diagnostic checks on system, keys, and MCP tools |
 | `codexa doctor --json` | Emit the same diagnostics as JSON for CI, scripts, and support bundles |
+| `codexa history` | List task history stored locally in `.codexa/sessions/` |
+| `codexa resume [session-id]` | Resume the latest or a selected saved task |
+| `codexa rollback [checkpoint-id]` | Restore the latest or a selected pre-task checkpoint |
 | `codexa status` | Output project language/framework detection status |
 | `codexa review` | Review uncommitted git changes for potential bugs |
 | `codexa commit` | Stage changes and generate a structured git commit message |

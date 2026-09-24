@@ -5,7 +5,7 @@
  *   .codexa/
  *   ├── memory.md          (Project purpose, architecture, conventions, active work)
  *   ├── project-map.json   (Lightweight cached knowledge graph)
- *   ├── sessions/          (Session transcripts / state)
+ *   ├── sessions/          (Versioned local task history)
  *   └── summaries/         (Concise incremental session summaries)
  *
  * NEVER stores API keys, credentials, or private tokens in project memory.
@@ -19,8 +19,9 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import type { ProjectKnowledgeGraph } from "@codexa/shared";
+import { ensureCodexaRuntimeIgnored } from "../state/local-storage.ts";
 
 export interface SessionSummaryEntry {
   sessionId: string;
@@ -44,6 +45,11 @@ export interface MemoryResumeInfo {
   memoryContent?: string;
 }
 
+export interface SessionHistoryEntry extends SessionSummaryEntry {
+  /** Schema version for forwards-compatible local history files. */
+  version: 1;
+}
+
 export class ProjectMemoryManager {
   private readonly cwd: string;
   private readonly codexaDir: string;
@@ -62,6 +68,7 @@ export class ProjectMemoryManager {
   }
 
   public ensureDirs(): void {
+    ensureCodexaRuntimeIgnored(this.cwd);
     if (!existsSync(this.codexaDir)) mkdirSync(this.codexaDir, { recursive: true, mode: 0o755 });
     if (!existsSync(this.sessionsDir))
       mkdirSync(this.sessionsDir, { recursive: true, mode: 0o755 });
@@ -137,6 +144,12 @@ Student software engineering workspace.
    */
   public recordSessionSummary(entry: SessionSummaryEntry): void {
     this.ensureDirs();
+    const sessionEntry: SessionHistoryEntry = { version: 1, ...entry };
+    const sessionFile = join(
+      this.sessionsDir,
+      `${entry.timestamp}_${entry.sessionId.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`,
+    );
+    writeFileSync(sessionFile, JSON.stringify(sessionEntry, null, 2), "utf-8");
     const summaryFile = join(
       this.summariesDir,
       `${entry.timestamp}_${entry.sessionId.slice(0, 8)}.json`,
@@ -161,6 +174,53 @@ Student software engineering workspace.
     }
 
     writeFileSync(this.memoryFile, currentMemory, "utf-8");
+  }
+
+  /** List locally persisted tasks, newest first. */
+  public listSessions(limit = 50): SessionHistoryEntry[] {
+    if (!existsSync(this.sessionsDir)) return this.listLegacySummaries(limit);
+
+    const sessions: SessionHistoryEntry[] = [];
+    for (const file of readdirSync(this.sessionsDir).filter((name) => name.endsWith(".json"))) {
+      try {
+        const parsed = JSON.parse(
+          readFileSync(join(this.sessionsDir, file), "utf-8"),
+        ) as SessionHistoryEntry;
+        if (parsed.sessionId && parsed.task && typeof parsed.timestamp === "number") {
+          sessions.push({ ...parsed, version: 1 });
+        }
+      } catch {
+        // Ignore damaged history entries while preserving the remaining history.
+      }
+    }
+
+    if (sessions.length === 0) return this.listLegacySummaries(limit);
+    return sessions.sort((a, b) => b.timestamp - a.timestamp).slice(0, Math.max(0, limit));
+  }
+
+  /** Resolve a session by id/prefix, or return the most recent task. */
+  public getSession(sessionId?: string): SessionHistoryEntry | null {
+    const sessions = this.listSessions();
+    if (!sessionId) return sessions[0] ?? null;
+    return (
+      sessions.find((session) => session.sessionId === sessionId) ??
+      sessions.find((session) => session.sessionId.startsWith(sessionId)) ??
+      null
+    );
+  }
+
+  private listLegacySummaries(limit: number): SessionHistoryEntry[] {
+    if (!existsSync(this.summariesDir)) return [];
+    const sessions: SessionHistoryEntry[] = [];
+    for (const file of readdirSync(this.summariesDir).filter((name) => name.endsWith(".json"))) {
+      try {
+        const parsed = JSON.parse(
+          readFileSync(join(this.summariesDir, file), "utf-8"),
+        ) as SessionSummaryEntry;
+        sessions.push({ version: 1, ...parsed });
+      } catch {}
+    }
+    return sessions.sort((a, b) => b.timestamp - a.timestamp).slice(0, Math.max(0, limit));
   }
 
   /**
@@ -240,8 +300,9 @@ Student software engineering workspace.
         success: true,
         message: `Imported memory from ${sourcePath} into .codexa/memory.md`,
       };
-    } catch (err: any) {
-      return { success: false, message: `Failed to import memory: ${err.message}` };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { success: false, message: `Failed to import memory: ${message}` };
     }
   }
 

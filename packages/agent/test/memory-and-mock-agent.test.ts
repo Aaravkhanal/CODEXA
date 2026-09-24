@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProjectMemoryManager } from "../src/memory/project-memory.ts";
 import { AgentOrchestrator } from "../src/orchestrator/index.ts";
-import { createMockModel, testProviderConnection } from "../src/providers/index.ts";
+import { testProviderConnection } from "../src/providers/index.ts";
 
 describe("Project Memory & Mock Agent Loop", () => {
   let testDir: string;
@@ -57,6 +57,12 @@ describe("Project Memory & Mock Agent Loop", () => {
     expect(resumeInfo.filesModified).toEqual(["src/calc.ts"]);
     expect(resumeInfo.testsPassed).toBe(true);
 
+    const sessions = memoryManager.listSessions();
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]?.sessionId).toBe("test-session-123");
+    expect(memoryManager.getSession("test-session")?.task).toBe("Add addition feature");
+    expect(existsSync(join(testDir, ".codexa", "sessions"))).toBe(true);
+
     // Export test
     const exportResult = memoryManager.exportMemory(join(testDir, "export.md"));
     expect(exportResult.success).toBe(true);
@@ -103,7 +109,6 @@ describe("Project Memory & Mock Agent Loop", () => {
       autoApprove: true,
     });
 
-    const progressEvents: string[] = [];
     const result = await orchestrator.run("Create a math helper utility");
 
     expect(result.success).toBe(true);
