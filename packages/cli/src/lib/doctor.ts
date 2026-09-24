@@ -205,6 +205,7 @@ function checkInstallationHealth(): DoctorCheckResult {
     );
   }
 
+  const commandVersion = version.stdout.match(/\b\d+\.\d+\.\d+(?:[-+][\w.-]+)?\b/)?.[0];
   const details = [`Command: ${commandPath}`, `Version: ${(version.stdout || "unknown").trim()}`];
   const brew = Bun.which("brew");
   const npm = Bun.which("npm");
@@ -213,16 +214,45 @@ function checkInstallationHealth(): DoctorCheckResult {
     ? run(npm, ["list", "-g", "@aaravkhanal/codexa", "--depth=0", "--json"])
     : null;
 
+  const brewVersion = brewInstall?.stdout.match(/\b\d+\.\d+\.\d+(?:[-+][\w.-]+)?\b/)?.[0];
+  let npmVersion: string | undefined;
+  if (npmInstall?.status === 0) {
+    try {
+      const npmTree = JSON.parse(npmInstall.stdout) as {
+        dependencies?: Record<string, { version?: string }>;
+      };
+      npmVersion = npmTree.dependencies?.["@aaravkhanal/codexa"]?.version;
+    } catch {
+      // A malformed npm response is shown as unavailable below.
+    }
+  }
+
   details.push(
-    brewInstall?.status === 0 && brewInstall.stdout.trim()
-      ? `Homebrew: ${brewInstall.stdout.trim()}`
-      : "Homebrew: package not installed",
+    brewVersion ? `Homebrew: ${brewInstall.stdout.trim()}` : "Homebrew: package not installed",
   );
   details.push(
-    npmInstall?.status === 0 && npmInstall.stdout.includes("@aaravkhanal/codexa")
-      ? "npm: global package installed"
-      : "npm: global package not installed",
+    npmVersion ? `npm: @aaravkhanal/codexa ${npmVersion}` : "npm: global package not installed",
   );
+
+  const installedVersions = [brewVersion, npmVersion].filter((candidate): candidate is string =>
+    Boolean(candidate),
+  );
+  if (
+    commandVersion &&
+    installedVersions.length > 0 &&
+    !installedVersions.includes(commandVersion)
+  ) {
+    return result(
+      "Install health",
+      "fail",
+      "A different CODEXA version is shadowing the installed package",
+      [
+        ...details,
+        `Resolved command version ${commandVersion}; installed version(s): ${installedVersions.join(", ")}`,
+        "Remove the older command or move Homebrew/npm earlier in PATH, then run 'hash -r'.",
+      ],
+    );
+  }
   return result("Install health", "pass", "Installed command starts correctly", details);
 }
 
